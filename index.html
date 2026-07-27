@@ -122,7 +122,6 @@
     .bg-blue-cloud { background: linear-gradient(135deg, #3a88e9, #0d52ab); border-radius: 20px; }
     .bg-red-car { background: linear-gradient(135deg, #ff4d4d, #cc0000); border-radius: 12px; }
     .bg-green-ev { background: linear-gradient(135deg, #28a745, #1e7e34); border-radius: 10px; }
-    .bg-orange-tire { background: linear-gradient(135deg, #f97316, #c2410c); border-radius: 12px; }
     .bg-red-globe { background: linear-gradient(135deg, #dc3545, #921c27); border-radius: 50%; }
     .bg-cyan-wrench { background: linear-gradient(135deg, #17a2b8, #117a8b); border-radius: 50%; }
     .bg-cyan-box { background: linear-gradient(135deg, #17a2b8, #0f6674); border-radius: 10px; }
@@ -171,73 +170,7 @@
       color: #888;
     }
 
-    /* تصميم واجهة الإطارات (TPMS) */
-    .tpms-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 15px 0;
-    }
-
-    .car-chassis {
-      position: relative;
-      width: 220px;
-      height: 310px;
-      background: #e2e8f0;
-      border-radius: 35px;
-      border: 3px solid #94a3b8;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 20px 0;
-    }
-
-    .car-chassis::after {
-      content: 'مقدمة السيارة ⬆';
-      position: absolute;
-      top: 10px;
-      font-size: 0.75rem;
-      font-weight: bold;
-      color: #64748b;
-    }
-
-    .tire-box {
-      position: absolute;
-      width: 110px;
-      background: #ffffff;
-      border: 2px solid #cbd5e1;
-      border-radius: 10px;
-      padding: 8px;
-      text-align: center;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.08);
-    }
-
-    .tire-box small {
-      display: block;
-      font-size: 0.7rem;
-      color: #64748b;
-      font-weight: bold;
-    }
-
-    .tire-box .press-val {
-      font-size: 1.1rem;
-      font-weight: bold;
-      color: #0284c7;
-      margin: 2px 0;
-    }
-
-    .tire-box .pct-val {
-      font-size: 0.75rem;
-      font-weight: bold;
-      color: #22c55e;
-    }
-
-    /* مواقع الإطارات الأربعة حول جسم السيارة */
-    .tire-fl { top: -15px; left: -125px; }  /* الأمامي أيسر */
-    .tire-fr { top: -15px; right: -125px; } /* الأمامي أيمن */
-    .tire-rl { bottom: -15px; left: -125px; }/* الخلفي أيسر */
-    .tire-rr { bottom: -15px; right: -125px; }/* الخلفي أيمن */
-
+    /* شبكة Live Data لمستشعرات السيارة */
     .live-data-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -365,11 +298,6 @@
       <div class="card-title">Local Diagnose</div>
     </div>
 
-    <div class="card" onclick="openModule('Tire Pressure (TPMS)')">
-      <div class="icon-box bg-orange-tire"><i class="fa-solid fa-circle-dot"></i></div>
-      <div class="card-title">TPMS (ضغط الإطارات)</div>
-    </div>
-
     <div class="card" onclick="openModule('EV & Battery System')">
       <div class="icon-box bg-green-ev"><i class="fa-solid fa-car-battery"></i></div>
       <div class="card-title">Battery System & EV</div>
@@ -450,12 +378,21 @@
     let isConnected = false;
     let liveDataInterval = null;
     let batteryInterval = null;
-    let tpmsInterval = null;
     let receiveBuffer = "";
     let pidIndex = 0;
 
+    // مصفوفة PIDs الخاصة بالحساسات والمستشعرات
     const pidQueue = [
-      '010C', '010D', '0105', '010F', '0111', '010A', '0114', '0104', '010E', '0133'
+      '010C', // RPM
+      '010D', // Speed
+      '0105', // Coolant Temp
+      '010F', // Intake Air Temp (IAT)
+      '0111', // Throttle Position (TPS)
+      '010A', // Fuel Rail Pressure
+      '0114', // Oxygen Sensor 1 Voltage
+      '0104', // Engine Load
+      '010E', // Timing Advance
+      '0133'  // Barometric Pressure
     ];
 
     function writeConsole(msg) {
@@ -518,7 +455,9 @@
     }
 
     async function sendCmd(cmd) {
-      if (!gattServer || !gattServer.connected) return;
+      if (!gattServer || !gattServer.connected) {
+        return;
+      }
 
       writeConsole("TX: " + cmd);
       const encoder = new TextEncoder();
@@ -546,12 +485,14 @@
     async function initvLinker() {
       await sendCmd("AT Z");
       setTimeout(() => sendCmd("ATE0"), 200);
-      setTimeout(() => sendCmd("STP 6"), 400);
+      setTimeout(() => sendCmd("STP 6"), 400); // ISO 15765-4 CAN
     }
 
+    // تحليل ردود المستشعرات والحساسات بالكامل
     function handleOBDResponse(response) {
       if(response.length > 0) writeConsole("RX: " + response);
 
+      // جهد الشريحة
       if (response.includes("V") && !isNaN(parseFloat(response))) {
         const volts = parseFloat(response);
         const voltEl = document.getElementById('batVoltVal');
@@ -562,6 +503,7 @@
         if (socEl) socEl.innerText = soc + "%";
       }
 
+      // 01 0C - RPM سرعة المحرك
       if (response.includes("41 0C")) {
         const parts = response.split("41 0C")[1].trim().split(" ");
         if (parts.length >= 2) {
@@ -570,6 +512,7 @@
         }
       }
 
+      // 01 0D - Vehicle Speed سرعة السيارة
       if (response.includes("41 0D")) {
         const parts = response.split("41 0D")[1].trim().split(" ");
         if (parts.length >= 1) {
@@ -578,6 +521,7 @@
         }
       }
 
+      // 01 05 - Coolant Temp حرارة محرك/ماء التبريد
       if (response.includes("41 05")) {
         const parts = response.split("41 05")[1].trim().split(" ");
         if (parts.length >= 1) {
@@ -588,12 +532,73 @@
         }
       }
 
-      // تحليل ردود ضغط الإطارات TPMS
-      if (response.includes("62 28") || response.startsWith("22 28")) {
-        parseTPMSData(response);
+      // 01 0F - Intake Air Temp (IAT) حرارة الهواء المشفوط
+      if (response.includes("41 0F")) {
+        const parts = response.split("41 0F")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const iat = parseInt(parts[0], 16) - 40;
+          updateSensorVal('iatVal', iat + " °C");
+        }
       }
 
-      if (response.startsWith("43")) parseDTC(response);
+      // 01 11 - Throttle Position (TPS) موقع دعسة البنزين
+      if (response.includes("41 11")) {
+        const parts = response.split("41 11")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const tps = Math.round((parseInt(parts[0], 16) * 100) / 255);
+          updateSensorVal('tpsVal', tps + " %");
+        }
+      }
+
+      // 01 0A - Fuel Pressure ضغط الوقود/المضخة
+      if (response.includes("41 0A")) {
+        const parts = response.split("41 0A")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const fuelPress = parseInt(parts[0], 16) * 3;
+          updateSensorVal('fuelPressVal', fuelPress + " kPa");
+        }
+      }
+
+      // 01 14 - Oxygen Sensor O2 (Bank 1, Sensor 1) حساس الاكسجين
+      if (response.includes("41 14")) {
+        const parts = response.split("41 14")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const o2Volt = (parseInt(parts[0], 16) / 200).toFixed(2);
+          updateSensorVal('o2Val', o2Volt + " V");
+        }
+      }
+
+      // 01 04 - Calculated Engine Load حمل المحرك
+      if (response.includes("41 04")) {
+        const parts = response.split("41 04")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const load = Math.round((parseInt(parts[0], 16) * 100) / 255);
+          updateSensorVal('loadVal', load + " %");
+        }
+      }
+
+      // 01 0E - Ignition Timing Advance توقيت الشرارة / الإشعال
+      if (response.includes("41 0E")) {
+        const parts = response.split("41 0E")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const timing = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
+          updateSensorVal('timingVal', timing + " °");
+        }
+      }
+
+      // 01 33 - Barometric Pressure الضغط الجوي
+      if (response.includes("41 33")) {
+        const parts = response.split("41 33")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const baro = parseInt(parts[0], 16);
+          updateSensorVal('baroVal', baro + " kPa");
+        }
+      }
+
+      // DTCs
+      if (response.startsWith("43")) {
+        parseDTC(response);
+      }
     }
 
     function updateSensorVal(id, val) {
@@ -601,110 +606,68 @@
       if(el) el.innerText = val;
     }
 
-    // إرسال طلب استعلام كمبيوتر الإطارات (TPMS ECU)
-    function requestTPMSData() {
-      if(!isConnected) return;
-      writeConsole("استعلام وحدة ضغط الإطارات TPMS...");
-      sendCmd("22 28 01"); // PID استعلام ضغط الإطارات في كيا
+    async function sendActuatorCmd(cmdHex) {
+      if(!isConnected) { alert("يرجى الاتصال بقطعة vLinker أولاً!"); return; }
+      
+      writeConsole("فتح الجلسة الموسعة ECU Extended Session (Kia)...");
+      await sendCmd('10 03');
+      
+      setTimeout(async () => {
+        writeConsole("إرسال أمر تحفيز المكون: " + cmdHex);
+        await sendCmd(cmdHex);
+      }, 300);
     }
 
-    // تحديث بيانات الإطار في الواجهة وحساب النسبة المئوية للضغط (الضغط المثالي هو 33 PSI)
-    function updateTireDisplay(elementPrefix, psi) {
-      const psiEl = document.getElementById(elementPrefix + 'Psi');
-      const pctEl = document.getElementById(elementPrefix + 'Pct');
-
-      if (psiEl && pctEl) {
-        psiEl.innerText = psi + " PSI";
-        const standardPsi = 33; // الضغط الموصى به
-        let pct = Math.min(100, Math.round((psi / standardPsi) * 100));
-        
-        pctEl.innerText = "نسبة الهواء: " + pct + "%";
-
-        // تحديد حالة الضغط باللون
-        if (psi >= 30 && psi <= 35) {
-          pctEl.style.color = "#22c55e"; // ممتاز
-        } else if (psi < 30 && psi >= 25) {
-          pctEl.style.color = "#eab308"; // منخفض قليلاً
-        } else {
-          pctEl.style.color = "#ef4444"; // خطير (منخفض جداً أو مرتفع)
-        }
-      }
-    }
-
-    function parseTPMSData(hexString) {
-      // قراءة ومعالجة قيم الضغط المستلمة للأربع إطارات
-      // في حال الاستعلام المباشر يتم تعبئة القيم تلقائياً
-      updateTireDisplay('tireFL', 33);
-      updateTireDisplay('tireFR', 32);
-      updateTireDisplay('tireRL', 31);
-      updateTireDisplay('tireRR', 33);
-    }
-
+    // فتح التحكم بالواجهات
     function openModule(moduleName) {
       document.getElementById('modalTitle').innerText = moduleName;
       const body = document.getElementById('modalBody');
 
-      if (moduleName.includes('Tire') || moduleName.includes('TPMS')) {
-        body.innerHTML = `
-          <p style="color: #475569; font-size: 0.88rem; margin-bottom: 10px;">
-            <strong>نظام مراقبة ضغط هواء الإطارات (TPMS - Kia Sorento):</strong>
-          </p>
-
-          <div class="tpms-container">
-            <div class="car-chassis">
-              
-              <!-- إطار أمامي أيسر -->
-              <div class="tire-box tire-fl">
-                <small>أمامي أيسر (FL)</small>
-                <div id="tireFLPsi" class="press-val">33 PSI</div>
-                <div id="tireFLPct" class="pct-val">نسبة الهواء: 100%</div>
-              </div>
-
-              <!-- إطار أمامي أيمن -->
-              <div class="tire-box tire-fr">
-                <small>أمامي أيمن (FR)</small>
-                <div id="tireFRPsi" class="press-val">32 PSI</div>
-                <div id="tireFRPct" class="pct-val">نسبة الهواء: 97%</div>
-              </div>
-
-              <!-- إطار خلفي أيسر -->
-              <div class="tire-box tire-rl">
-                <small>خلفي أيسر (RL)</small>
-                <div id="tireRLPsi" class="press-val">31 PSI</div>
-                <div id="tireRLPct" class="pct-val">نسبة الهواء: 94%</div>
-              </div>
-
-              <!-- إطار خلفي أيمن -->
-              <div class="tire-box tire-rr">
-                <small>خلفي أيمن (RR)</small>
-                <div id="tireRRPsi" class="press-val">33 PSI</div>
-                <div id="tireRRPct" class="pct-val">نسبة الهواء: 100%</div>
-              </div>
-
-            </div>
-          </div>
-
-          <div style="display:flex; gap:10px; margin-top:10px;">
-            <button class="action-btn btn-on" onclick="startTPMSMonitor()">بدء فحص ضغط الإطارات</button>
-            <button class="action-btn btn-off" onclick="stopTPMSMonitor()">إيقاف الفحص</button>
-          </div>
-          <p style="font-size:0.75rem; color:#64748b; margin-top:8px; text-align:center;">* الضغط الطبيعي الموصى به لسيارة كيا سورنتو هو 33 PSI.</p>
-        `;
-      } else if (moduleName === 'Local Diagnose' || moduleName === 'Intelligent Diagnose') {
+      if (moduleName === 'Local Diagnose' || moduleName === 'Intelligent Diagnose') {
         body.innerHTML = `
           <h3 style="margin-bottom:8px; color:#0284c7;">قراءات الحساسات والمستشعرات (Live Data)</h3>
           
           <div class="live-data-grid">
-            <div class="sensor-card"><small>RPM</small><div id="rpmVal" class="val">0</div></div>
-            <div class="sensor-card"><small>Speed</small><div id="speedVal" class="val" style="color:#22c55e;">0</div></div>
-            <div class="sensor-card"><small>Coolant</small><div id="coolantVal" class="val" style="color:#ef4444;">--</div></div>
-            <div class="sensor-card"><small>IAT</small><div id="iatVal" class="val" style="color:#eab308;">--</div></div>
-            <div class="sensor-card"><small>TPS</small><div id="tpsVal" class="val" style="color:#6366f1;">--</div></div>
-            <div class="sensor-card"><small>Fuel Press</small><div id="fuelPressVal" class="val" style="color:#14b8a6;">--</div></div>
-            <div class="sensor-card"><small>O2 Sensor</small><div id="o2Val" class="val" style="color:#ec4899;">--</div></div>
-            <div class="sensor-card"><small>Load</small><div id="loadVal" class="val" style="color:#8b5cf6;">--</div></div>
-            <div class="sensor-card"><small>Timing</small><div id="timingVal" class="val" style="color:#f97316;">--</div></div>
-            <div class="sensor-card"><small>Baro</small><div id="baroVal" class="val" style="color:#06b6d4;">--</div></div>
+            <div class="sensor-card">
+              <small>سرعة المحرك RPM</small>
+              <div id="rpmVal" class="val">0</div>
+            </div>
+            <div class="sensor-card">
+              <small>سرعة السيارة Speed</small>
+              <div id="speedVal" class="val" style="color:#22c55e;">0</div>
+            </div>
+            <div class="sensor-card">
+              <small>حرارة المحرك Coolant</small>
+              <div id="coolantVal" class="val" style="color:#ef4444;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>حرارة الهواء IAT</small>
+              <div id="iatVal" class="val" style="color:#eab308;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>حساس الدعسة TPS</small>
+              <div id="tpsVal" class="val" style="color:#6366f1;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>ضغط الوقود Fuel Press</small>
+              <div id="fuelPressVal" class="val" style="color:#14b8a6;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>حساس الاكسجين O2</small>
+              <div id="o2Val" class="val" style="color:#ec4899;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>حمل المحرك Load</small>
+              <div id="loadVal" class="val" style="color:#8b5cf6;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>توقيت الشرارة Timing</small>
+              <div id="timingVal" class="val" style="color:#f97316;">--</div>
+            </div>
+            <div class="sensor-card">
+              <small>الضغط الجوي Baro</small>
+              <div id="baroVal" class="val" style="color:#06b6d4;">--</div>
+            </div>
           </div>
 
           <div style="display:flex; gap:10px; margin-bottom:15px;">
@@ -713,6 +676,7 @@
           </div>
 
           <hr style="margin:15px 0; border:0; border-top:1px solid #e2e8f0;">
+          
           <h3 style="margin-bottom:8px; color:#0284c7;">فحص ومسح الأعطال (DTCs)</h3>
           <div style="display:flex; gap:10px; margin-top:10px;">
             <button style="padding: 10px 16px; background: #22c55e; color: #fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="sendCmd('03')">قراءة الأعطال</button>
@@ -722,15 +686,73 @@
         `;
       } else if (moduleName.includes('Battery') || moduleName === 'EV & Battery System') {
         body.innerHTML = `
+          <p style="color: #475569; font-size: 0.88rem; margin-bottom: 12px;">
+            <strong>نظام مراقبة وتشخيص البطارية والمولد (Kia Sorento):</strong>
+          </p>
+
           <div class="battery-grid">
-            <div class="battery-card"><small>جهد البطارية</small><div id="batVoltVal" class="val" style="color:#0284c7;">-- V</div></div>
-            <div class="battery-card"><small>حالة الشحن (SOC)</small><div id="batSocVal" class="val" style="color:#22c55e;">-- %</div></div>
-            <div class="battery-card"><small>درجة الحرارة</small><div id="batTempVal" class="val" style="color:#eab308;">-- °C</div></div>
-            <div class="battery-card"><small>حالة المولد</small><div id="altStatusVal" class="val" style="color:#6366f1; font-size: 1.1rem;">جاهز</div></div>
+            <div class="battery-card">
+              <small>جهد البطارية (Volts)</small>
+              <div id="batVoltVal" class="val" style="color:#0284c7;">-- V</div>
+            </div>
+            <div class="battery-card">
+              <small>حالة الشحن (SOC)</small>
+              <div id="batSocVal" class="val" style="color:#22c55e;">-- %</div>
+            </div>
+            <div class="battery-card">
+              <small>درجة الحرارة</small>
+              <div id="batTempVal" class="val" style="color:#eab308;">-- °C</div>
+            </div>
+            <div class="battery-card">
+              <small>حالة المولد (Alternator)</small>
+              <div id="altStatusVal" class="val" style="color:#6366f1; font-size: 1.1rem;">جاهز</div>
+            </div>
           </div>
+
           <div style="display:flex; gap:10px; margin-top:15px;">
-            <button class="action-btn btn-on" onclick="startBatteryMonitor()">بدء مراقبة البطارية</button>
+            <button class="action-btn btn-on" onclick="startBatteryMonitor()">بدء مراقبة البطارية المباشرة</button>
             <button class="action-btn btn-off" onclick="stopBatteryMonitor()">إيقاف المراقبة</button>
+          </div>
+
+          <hr style="margin:15px 0; border:0; border-top:1px solid #e2e8f0;">
+
+          <div class="test-card">
+            <h4><i class="fa-solid fa-car-battery" style="color:#22c55e;"></i> اختبار كفاءة المولد (Alternator Test)</h4>
+            <p style="font-size:0.8rem; color:#64748b; margin-bottom:10px;">قم بتشغيل المحرك واضغط للاختبار لتقييم شحن المولد للبطارية.</p>
+            <button class="action-btn btn-toggle" onclick="testAlternator()">بدء اختبار الدينامو / المولد</button>
+          </div>
+        `;
+      } else if (moduleName === 'Special Function') {
+        body.innerHTML = `
+          <p style="color: #475569; font-size: 0.88rem; margin-bottom: 12px; line-height: 1.4;">
+            <strong>اختبارات التحفيز والتحكم المباشر (Kia Sorento 2012):</strong><br>
+            تأكد أن السويتش مفتوح (Ignition ON) والمحرك مطفأ تماماً قبل إجراء الإختبارات.
+          </p>
+
+          <div class="test-grid">
+            <div class="test-card">
+              <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 01 03')">تشغيل المروحة (السرعة العالية)</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 01 00')">إيقاف / إرجاع للـ ECU</button>
+            </div>
+
+            <div class="test-card">
+              <h4><i class="fa-solid fa-gas-pump" style="color:#eab308;"></i> مضخة الوقود</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 02 01')">تشغيل مضخة الوقود</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 02 00')">إيقاف المضخة</button>
+            </div>
+
+            <div class="test-card">
+              <h4><i class="fa-solid fa-bolt" style="color:#64748b;"></i> ريلاي الكمبروسر (A/C)</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 03 01')">تشغيل ريلاي التكييف</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 03 00')">إيقاف الريلاي</button>
+            </div>
+
+            <div class="test-card">
+              <h4><i class="fa-solid fa-fire-flame-simple" style="color:#ef4444;"></i> بخاخات الوقود</h4>
+              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 12 05 01')">اختبار قطع الحقن (Cyl 1)</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 05 00')">إعادة وضع التشغيل</button>
+            </div>
           </div>
         `;
       } else {
@@ -743,33 +765,19 @@
     function closeModal() {
       stopLiveDataCycle();
       stopBatteryMonitor();
-      stopTPMSMonitor();
       document.getElementById('modalWindow').style.display = 'none';
     }
 
-    function startTPMSMonitor() {
-      if(tpmsInterval) clearInterval(tpmsInterval);
-      writeConsole("بدء فحص ومراقبة ضغط الإطارات الأربعة...");
-      requestTPMSData();
-      tpmsInterval = setInterval(requestTPMSData, 2000);
-    }
-
-    function stopTPMSMonitor() {
-      if(tpmsInterval) {
-        clearInterval(tpmsInterval);
-        tpmsInterval = null;
-        writeConsole("تم إيقاف فحص الإطارات.");
-      }
-    }
-
+    // دورة قراءة جميع الحساسات بشكل متتابع وسريع
     function startLiveDataCycle() {
       if(liveDataInterval) clearInterval(liveDataInterval);
       writeConsole("بدء حلقة قراءة جميع مستشعرات السيارة الحية...");
       pidIndex = 0;
+
       liveDataInterval = setInterval(() => {
         sendCmd(pidQueue[pidIndex]);
         pidIndex = (pidIndex + 1) % pidQueue.length;
-      }, 350);
+      }, 350); // إرسال طلب حساس كل 350 ملي ثانية
     }
 
     function stopLiveDataCycle() {
@@ -797,6 +805,28 @@
       }
     }
 
+    function testAlternator() {
+      writeConsole("جاري فحص كفاءة الشحن والدينامو...");
+      sendCmd("AT RV");
+      setTimeout(() => {
+        const voltText = document.getElementById('batVoltVal').innerText;
+        const volts = parseFloat(voltText);
+        const altStatus = document.getElementById('altStatusVal');
+        if(!isNaN(volts) && altStatus) {
+          if(volts >= 13.5 && volts <= 14.8) {
+            altStatus.innerText = "سليم (شحن ممتاز)";
+            altStatus.style.color = "#22c55e";
+          } else if(volts < 13.5 && volts > 12.0) {
+            altStatus.innerText = "ضعيف (تحت 13.5V)";
+            altStatus.style.color = "#eab308";
+          } else {
+            altStatus.innerText = "غير شغال / عاطل";
+            altStatus.style.color = "#ef4444";
+          }
+        }
+      }, 800);
+    }
+
     function clearDTC() {
       if(confirm("هل أنت تأكد من مسح جميع الأعطال وإيقاف لمبة المحرك Check Engine؟")) {
         sendCmd('04');
@@ -808,21 +838,27 @@
       const output = document.getElementById('dtcOutput');
       if(!output) return;
       output.innerHTML = '';
+
       const cleanHex = hexString.replace(/\s+/g, '').slice(2);
       if (cleanHex.length < 4 || cleanHex.startsWith("0000")) {
         output.innerHTML = `<p style="color: #22c55e; font-weight:bold;">لا يوجد أي كود عطل مسجل (No Trouble Codes Found).</p>`;
         return;
       }
+
       for (let i = 0; i < cleanHex.length; i += 4) {
         const codeHex = cleanHex.substr(i, 4);
         if (codeHex === "0000") continue;
+
         const firstByte = parseInt(codeHex.substr(0, 2), 16);
         const typeIndex = (firstByte & 0xC0) >> 6;
         const typeLetters = ['P', 'C', 'B', 'U'];
+        
         const letter = typeLetters[typeIndex];
         const digit1 = (firstByte & 0x30) >> 4;
         const remainingDigits = codeHex.substr(1);
+
         const fullCode = `${letter}${digit1}${remainingDigits}`;
+
         output.innerHTML += `<div style="background:#fee2e2; border-right:4px solid #ef4444; padding:8px 12px; margin-bottom:6px; border-radius:4px; color:#991b1b;">
           <strong>${fullCode}</strong> - كود عطل مسجل في الكمبيوتر
         </div>`;
