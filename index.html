@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام الفحص والتحكم الذكي - X-431 vLinker Web</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    body {
+      background-color: #eef1f5;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      color: #333;
+    }
+
+    /* الشريط العلوي - شريط الحالة والاتصال */
+    .top-bar {
+      width: 100%;
+      max-width: 1200px;
+      background: #ffffff;
+      padding: 12px 20px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      box-shadow: 0 0 6px #ef4444;
+    }
+
+    .dot.connected {
+      background-color: #22c55e;
+      box-shadow: 0 0 6px #22c55e;
+    }
+
+    .connect-btn {
+      background: #0284c7;
+      color: #fff;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: bold;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .connect-btn:hover { background: #0369a1; }
+
+    /* شبكة الواجهة الرئيسية - Launch X-431 Grid */
+    .main-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      width: 100%;
+      max-width: 1200px;
+    }
+
+    /* تصميم البطاقات */
+    .card {
+      background: #f8f9fa;
+      border: 1px solid #dcdfe6;
+      border-radius: 10px;
+      padding: 22px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+      transition: all 0.2s ease-in-out;
+      text-align: center;
+      min-height: 135px;
+    }
+
+    .card:hover {
+      background: #ffffff;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+      border-color: #38bdf8;
+    }
+
+    .card:active { transform: translateY(0); }
+
+    .icon-box {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+      color: white;
+      font-size: 24px;
+    }
+
+    .bg-blue-cloud { background: linear-gradient(135deg, #3a88e9, #0d52ab); border-radius: 20px; }
+    .bg-red-car { background: linear-gradient(135deg, #ff4d4d, #cc0000); border-radius: 12px; }
+    .bg-green-ev { background: linear-gradient(135deg, #28a745, #1e7e34); border-radius: 10px; }
+    .bg-red-globe { background: linear-gradient(135deg, #dc3545, #921c27); border-radius: 50%; }
+    
+    .bg-cyan-wrench { background: linear-gradient(135deg, #17a2b8, #117a8b); border-radius: 50%; }
+    .bg-cyan-box { background: linear-gradient(135deg, #17a2b8, #0f6674); border-radius: 10px; }
+    .bg-green-upload { background: linear-gradient(135deg, #28a745, #155724); border-radius: 10px; }
+    .bg-green-note { background: linear-gradient(135deg, #5cb85c, #3d8b3d); border-radius: 10px; }
+    .bg-teal-widget { background: linear-gradient(135deg, #00a8cc, #007a93); border-radius: 10px; }
+
+    .bg-red-cart { background: linear-gradient(135deg, #d9534f, #a92b2b); border-radius: 10px; }
+    .bg-red-book { background: linear-gradient(135deg, #c9302c, #761c19); border-radius: 8px; }
+    .bg-blue-clipboard { background: linear-gradient(135deg, #31b0d5, #1b6d85); border-radius: 8px; }
+    .bg-gold-user { background: linear-gradient(135deg, #f0ad4e, #eea236); border-radius: 50%; }
+    .bg-blue-settings { background: linear-gradient(135deg, #0275d8, #014c8c); border-radius: 10px; }
+
+    .card-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #222;
+      line-height: 1.2;
+    }
+
+    /* النافذة المنبثقة */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      align-items: center; justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: #fff;
+      width: 92%; max-width: 680px;
+      padding: 24px;
+      border-radius: 12px;
+      max-height: 85vh;
+      overflow-y: auto;
+      text-align: right;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    .close-btn {
+      float: left;
+      font-size: 24px;
+      cursor: pointer;
+      font-weight: bold;
+      color: #888;
+    }
+
+    .test-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 15px;
+    }
+
+    .test-card {
+      background: #f1f5f9;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+    }
+
+    .test-card h4 {
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 9px;
+      border: none;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin-bottom: 6px;
+      transition: opacity 0.2s;
+    }
+
+    .action-btn:hover { opacity: 0.88; }
+    .btn-on { background-color: #22c55e; color: #fff; }
+    .btn-off { background-color: #ef4444; color: #fff; }
+    .btn-toggle { background-color: #0284c7; color: #fff; }
+
+    .console-log {
+      background: #0f172a;
+      color: #38bdf8;
+      font-family: monospace;
+      padding: 12px;
+      height: 110px;
+      overflow-y: auto;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      direction: ltr;
+      text-align: left;
+      margin-top: 15px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+  <!-- شريط الحالة العلوي -->
+  <div class="top-bar">
+    <div class="status-badge">
+      <div id="statusDot" class="dot"></div>
+      <span id="statusText">غير متصل بالسيارة</span>
+    </div>
+    <button id="connectBtn" class="connect-btn" onclick="connectBluetooth()">اتصال vLinker Web</button>
+  </div>
+
+  <!-- شبكة الواجهة الرئيسية -->
+  <div class="main-grid">
+
+    <div class="card" onclick="openModule('Intelligent Diagnose')">
+      <div class="icon-box bg-blue-cloud"><i class="fa-solid fa-cloud-nodes"></i></div>
+      <div class="card-title">Intelligent Diagnose</div>
+    </div>
+
+    <div class="card" onclick="openModule('Local Diagnose')">
+      <div class="icon-box bg-red-car"><i class="fa-solid fa-car-side"></i></div>
+      <div class="card-title">Local Diagnose</div>
+    </div>
+
+    <div class="card" onclick="openModule('EV')">
+      <div class="icon-box bg-green-ev"><i class="fa-solid fa-car-battery"></i></div>
+      <div class="card-title">EV</div>
+    </div>
+
+    <div class="card" onclick="openModule('Remote Diagnose')">
+      <div class="icon-box bg-red-globe"><i class="fa-solid fa-globe"></i></div>
+      <div class="card-title">Remote Diagnose</div>
+    </div>
+
+    <div class="card" onclick="openModule('Special Function')">
+      <div class="icon-box bg-cyan-wrench"><i class="fa-solid fa-wrench"></i></div>
+      <div class="card-title">Special Function</div>
+    </div>
+
+    <div class="card" onclick="openModule('Tool box')">
+      <div class="icon-box bg-cyan-box"><i class="fa-solid fa-briefcase"></i></div>
+      <div class="card-title">Tool box</div>
+    </div>
+
+    <div class="card" onclick="openModule('Software Update')">
+      <div class="icon-box bg-green-upload"><i class="fa-solid fa-upload"></i></div>
+      <div class="card-title">Software Update</div>
+    </div>
+
+    <div class="card" onclick="openModule('Feedback')">
+      <div class="icon-box bg-green-note"><i class="fa-solid fa-pen-to-square"></i></div>
+      <div class="card-title">Feedback</div>
+    </div>
+
+    <div class="card" onclick="openModule('X-431 Diagnostic Widget')">
+      <div class="icon-box bg-teal-widget"><i class="fa-solid fa-table-cells-large"></i></div>
+      <div class="card-title">X-431 Diagnostic<br>Widget</div>
+    </div>
+
+    <div class="card" onclick="openModule('Mall')">
+      <div class="icon-box bg-red-cart"><i class="fa-solid fa-cart-shopping"></i></div>
+      <div class="card-title">Mall</div>
+    </div>
+
+    <div class="card" onclick="openModule('Info Center')">
+      <div class="icon-box bg-red-book"><i class="fa-solid fa-book"></i></div>
+      <div class="card-title">Info Center</div>
+    </div>
+
+    <div class="card" onclick="openModule('Diagnostic History')">
+      <div class="icon-box bg-blue-clipboard"><i class="fa-solid fa-clipboard-check"></i></div>
+      <div class="card-title">Diagnostic History</div>
+    </div>
+
+    <div class="card" onclick="openModule('User Info')">
+      <div class="icon-box bg-gold-user"><i class="fa-solid fa-user"></i></div>
+      <div class="card-title">User Info</div>
+    </div>
+
+    <div class="card" onclick="openModule('Settings')">
+      <div class="icon-box bg-blue-settings"><i class="fa-solid fa-gear"></i></div>
+      <div class="card-title">Settings</div>
+    </div>
+
+  </div>
+
+  <!-- النافذة المنبثقة -->
+  <div id="modalWindow" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle" style="margin-bottom: 12px; color: #0284c7;">عنوان الوحدة</h2>
+      <div id="modalBody"></div>
+      <div id="consoleLog" class="console-log">> المتصفح جاهز للاتصال عبر Web Bluetooth...</div>
+    </div>
+  </div>
+
+  <script>
+    let bluetoothDevice;
+    let gattServer;
+    let rxCharacteristic;
+    let txCharacteristic;
+    let isConnected = false;
+    let liveDataInterval = null;
+    let receiveBuffer = "";
+
+    function writeConsole(msg) {
+      const consoleLog = document.getElementById('consoleLog');
+      if (consoleLog) {
+        consoleLog.innerHTML += `<br>> ${msg}`;
+        consoleLog.scrollTop = consoleLog.scrollHeight;
+      }
+    }
+
+    // 1. الاتصال بقطعة vLinker مباشرة عبر Web Bluetooth API للمتصفح
+    async function connectBluetooth() {
+      if (!navigator.bluetooth) {
+        alert("متصفحك لا يدعم Web Bluetooth! يرجى فتح الصفحة باستخدام متصفح Google Chrome على هاتفك الذكي.");
+        return;
+      }
+
+      try {
+        writeConsole("جاري إظهار قائمة أجهزة البلوتوث المتاحة...");
+
+        // طلب الاتصال بأجهزة BLE المتاحة
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [
+            '0000ffe0-0000-1000-8000-00805f9b34fb', // الخدمة الافتراضية لشريحة vLinker BLE
+            'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+            '000018f0-0000-1000-8000-00805f9b34fb'
+          ]
+        });
+
+        writeConsole("تم اختيار الجهاز: " + bluetoothDevice.name);
+        writeConsole("جاري الاتصال بالسيرفر (GATT)...");
+
+        gattServer = await bluetoothDevice.gatt.connect();
+
+        // البحث عن الخدمة المتاحة للاتصال التسلسلي
+        const primaryServices = await gattServer.getPrimaryServices();
+        if (primaryServices.length === 0) throw new Error("لم يتم العثور على أي خدمات متوافقة!");
+
+        const service = primaryServices[0];
+        const characteristics = await service.getCharacteristics();
+
+        // تعيين خصائص الاستقبال والإرسال
+        rxCharacteristic = characteristics.find(c => c.properties.notify || c.properties.indicate) || characteristics[0];
+        txCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
+
+        // تفعيل الاستماع التلقائي للبيانات القادمة من القطعة
+        await rxCharacteristic.startNotifications();
+        rxCharacteristic.addEventListener('characteristicvaluechanged', handleWebResponse);
+
+        onConnectSuccess();
+
+      } catch (error) {
+        writeConsole("فشل الاتصال: " + error.message);
+        alert("تعذر الاتصال بـ vLinker: " + error.message);
+      }
+    }
+
+    function onConnectSuccess() {
+      isConnected = true;
+      document.getElementById('statusDot').classList.add('connected');
+      document.getElementById('statusText').innerText = "متصل بـ " + (bluetoothDevice.name || "vLinker");
+      document.getElementById('connectBtn').style.display = "none";
+      
+      writeConsole("تم الاتصال بالسيارة بنجاح عبر المتصفح!");
+      initvLinker();
+    }
+
+    // 2. دالة إرسال الأوامر المباشرة للمتصفح
+    async function sendCmd(cmd) {
+      if (!gattServer || !gattServer.connected) {
+        alert("غير متصل بالسيارة!");
+        return;
+      }
+
+      writeConsole("TX: " + cmd);
+      const encoder = new TextEncoder();
+      const data = encoder.encode(cmd + "\r");
+
+      try {
+        await txCharacteristic.writeValue(data);
+      } catch (err) {
+        writeConsole("خطأ إرسال: " + err.message);
+      }
+    }
+
+    // 3. استقبال ومعالجة البيانات القادمة من البلوتوث
+    function handleWebResponse(event) {
+      const decoder = new TextDecoder('utf-8');
+      const text = decoder.decode(event.target.value);
+      receiveBuffer += text;
+
+      if (receiveBuffer.includes("\r") || receiveBuffer.includes(">")) {
+        const response = receiveBuffer.trim();
+        receiveBuffer = "";
+        handleOBDResponse(response);
+      }
+    }
+
+    // 4. تهيئة الشريحة
+    async function initvLinker() {
+      await sendCmd("AT Z");
+      setTimeout(() => sendCmd("ATE0"), 200);
+      setTimeout(() => sendCmd("STP 6"), 400); // CAN Protocol
+    }
+
+    // 5. تفسير استجابات السيارات
+    function handleOBDResponse(response) {
+      if(response.length > 0) writeConsole("RX: " + response);
+
+      // RPM
+      if (response.includes("41 0C")) {
+        const parts = response.split("41 0C")[1].trim().split(" ");
+        if (parts.length >= 2) {
+          const rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
+          const el = document.getElementById('rpmVal');
+          if(el) el.innerText = rpm;
+        }
+      }
+
+      // Speed
+      if (response.includes("41 0D")) {
+        const parts = response.split("41 0D")[1].trim().split(" ");
+        if (parts.length >= 1) {
+          const speed = parseInt(parts[0], 16);
+          const el = document.getElementById('speedVal');
+          if(el) el.innerText = speed;
+        }
+      }
+
+      // DTCs
+      if (response.startsWith("43")) {
+        parseDTC(response);
+      }
+    }
+
+    // 6. التحكم بالواجهات
+    function openModule(moduleName) {
+      document.getElementById('modalTitle').innerText = moduleName;
+      const body = document.getElementById('modalBody');
+
+      if (moduleName === 'Special Function') {
+        body.innerHTML = `
+          <p style="color: #475569; font-size: 0.88rem; margin-bottom: 12px; line-height: 1.4;">
+            <strong>التحكم الثنائي والتحفيز التفاعلي (Bi-Directional Control / Active Tests):</strong><br>
+            إرسال أوامر تحفيز مباشرة للأجزاء عبر المتصفح.
+          </p>
+
+          <div class="test-grid">
+            <div class="test-card">
+              <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 11 02 03 01')">تشغيل المروحة</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 11 02 00')">إيقاف / إعادة للـ ECU</button>
+            </div>
+
+            <div class="test-card">
+              <h4><i class="fa-solid fa-gas-pump" style="color:#eab308;"></i> مضخة الوقود</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 01 01')">تشغيل المضخة</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 01 00')">إيقاف المضخة</button>
+            </div>
+
+            <div class="test-card">
+              <h4><i class="fa-solid fa-smog" style="color:#64748b;"></i> صمام EGR</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 2E 01 64')">فتح الصمام (100%)</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 2E 01 00')">إغلاق الصمام (0%)</button>
+            </div>
+
+            <div class="test-card">
+              <h4><i class="fa-solid fa-lock" style="color:#ef4444;"></i> قفل الأبواب</h4>
+              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 45 01 01')">قفل الأبواب</button>
+              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 45 01 00')">فتح الأبواب</button>
+            </div>
+          </div>
+        `;
+      } else if (moduleName === 'Local Diagnose' || moduleName === 'Intelligent Diagnose') {
+        body.innerHTML = `
+          <h3>البيانات الحية المباشرة (Live Data)</h3>
+          <div style="display:flex; gap:15px; margin: 15px 0;">
+            <div style="background:#f8fafc; padding:12px; border-radius:8px; flex:1; text-align:center; border:1px solid #e2e8f0;">
+              <small>سرعة المحرك</small>
+              <div id="rpmVal" style="font-size:1.8rem; font-weight:bold; color:#0284c7;">0</div> RPM
+            </div>
+            <div style="background:#f8fafc; padding:12px; border-radius:8px; flex:1; text-align:center; border:1px solid #e2e8f0;">
+              <small>سرعة السيارة</small>
+              <div id="speedVal" style="font-size:1.8rem; font-weight:bold; color:#22c55e;">0</div> km/h
+            </div>
+          </div>
+          <button style="padding: 10px 16px; background: #0284c7; color: #fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="toggleLiveData()">بدء / إيقاف Live Data</button>
+          <hr style="margin:15px 0; border:0; border-top:1px solid #e2e8f0;">
+          <h3>فحص ومسح الأعطال (DTCs)</h3>
+          <div style="display:flex; gap:10px; margin-top:10px;">
+            <button style="padding: 10px 16px; background: #22c55e; color: #fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="sendCmd('03')">قراءة الأعطال</button>
+            <button style="padding: 10px 16px; background: #ef4444; color: #fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="clearDTC()">مسح الأعطال</button>
+          </div>
+          <div id="dtcOutput" style="margin-top:15px;"></div>
+        `;
+      } else {
+        body.innerHTML = `<p style="color: #64748b;">الوحدة المختارة (${moduleName}) جاهزة للتطوير المخصص.</p>`;
+      }
+
+      document.getElementById('modalWindow').style.display = 'flex';
+    }
+
+    function closeModal() {
+      if(liveDataInterval) clearInterval(liveDataInterval);
+      document.getElementById('modalWindow').style.display = 'none';
+    }
+
+    async function sendActuatorCmd(cmd) {
+      if(!isConnected) { alert("يرجى الاتصال بقطعة vLinker أولاً!"); return; }
+      await sendCmd('10 03');
+      setTimeout(async () => { await sendCmd(cmd); }, 150);
+    }
+
+    function toggleLiveData() {
+      if(liveDataInterval) {
+        clearInterval(liveDataInterval);
+        liveDataInterval = null;
+        writeConsole("تم إيقاف قراءة Live Data");
+      } else {
+        liveDataInterval = setInterval(() => {
+          sendCmd('010C');
+          setTimeout(() => sendCmd('010D'), 300);
+        }, 1200);
+      }
+    }
+
+    function clearDTC() {
+      if(confirm("هل أنت تأكد من مسح جميع الأعطال وإيقاف لمبة المحرك Check Engine؟")) {
+        sendCmd('04');
+        document.getElementById('dtcOutput').innerText = "تم إرسال أمر مسح الأعطال بنجاح.";
+      }
+    }
+
+    function parseDTC(hexString) {
+      const output = document.getElementById('dtcOutput');
+      if(!output) return;
+      output.innerHTML = '';
+
+      const cleanHex = hexString.replace(/\s+/g, '').slice(2);
+      if (cleanHex.length < 4 || cleanHex.startsWith("0000")) {
+        output.innerHTML = `<p style="color: #22c55e; font-weight:bold;">لا يوجد أي كود عطل مسجل (No Trouble Codes Found).</p>`;
+        return;
+      }
+
+      for (let i = 0; i < cleanHex.length; i += 4) {
+        const codeHex = cleanHex.substr(i, 4);
+        if (codeHex === "0000") continue;
+
+        const firstByte = parseInt(codeHex.substr(0, 2), 16);
+        const typeIndex = (firstByte & 0xC0) >> 6;
+        const typeLetters = ['P', 'C', 'B', 'U'];
+        
+        const letter = typeLetters[typeIndex];
+        const digit1 = (firstByte & 0x30) >> 4;
+        const remainingDigits = codeHex.substr(1);
+
+        const fullCode = `${letter}${digit1}${remainingDigits}`;
+
+        output.innerHTML += `<div style="background:#fee2e2; border-right:4px solid #ef4444; padding:8px 12px; margin-bottom:6px; border-radius:4px; color:#991b1b;">
+          <strong>${fullCode}</strong> - كود عطل مسجل في الكمبيوتر
+        </div>`;
+      }
+    }
+  </script>
+</body>
+</html>
