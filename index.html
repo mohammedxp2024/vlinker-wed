@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفحص والتحكم الذكي - X-431 vLinker Web</title>
+  <title>نظام الفحص والتحكم الذكي - X-431 vLinker Web (Kia Sorento)</title>
   <style>
     * {
       box-sizing: border-box;
@@ -341,21 +341,20 @@
       }
     }
 
-    // 1. الاتصال بقطعة vLinker مباشرة عبر Web Bluetooth API للمتصفح
+    // 1. الاتصال بقطعة vLinker عبر Web Bluetooth API
     async function connectBluetooth() {
       if (!navigator.bluetooth) {
-        alert("متصفحك لا يدعم Web Bluetooth! يرجى فتح الصفحة باستخدام متصفح Google Chrome على هاتفك الذكي.");
+        alert("متصفحك لا يدعم Web Bluetooth! يرجى فتح الصفحة باستخدام متصفح Google Chrome على الأندرويد.");
         return;
       }
 
       try {
         writeConsole("جاري إظهار قائمة أجهزة البلوتوث المتاحة...");
 
-        // طلب الاتصال بأجهزة BLE المتاحة
         bluetoothDevice = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: [
-            '0000ffe0-0000-1000-8000-00805f9b34fb', // الخدمة الافتراضية لشريحة vLinker BLE
+            '0000ffe0-0000-1000-8000-00805f9b34fb',
             'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
             '000018f0-0000-1000-8000-00805f9b34fb'
           ]
@@ -366,18 +365,15 @@
 
         gattServer = await bluetoothDevice.gatt.connect();
 
-        // البحث عن الخدمة المتاحة للاتصال التسلسلي
         const primaryServices = await gattServer.getPrimaryServices();
         if (primaryServices.length === 0) throw new Error("لم يتم العثور على أي خدمات متوافقة!");
 
         const service = primaryServices[0];
         const characteristics = await service.getCharacteristics();
 
-        // تعيين خصائص الاستقبال والإرسال
         rxCharacteristic = characteristics.find(c => c.properties.notify || c.properties.indicate) || characteristics[0];
         txCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
 
-        // تفعيل الاستماع التلقائي للبيانات القادمة من القطعة
         await rxCharacteristic.startNotifications();
         rxCharacteristic.addEventListener('characteristicvaluechanged', handleWebResponse);
 
@@ -399,7 +395,7 @@
       initvLinker();
     }
 
-    // 2. دالة إرسال الأوامر المباشرة للمتصفح
+    // 2. دالة إرسال الأوامر المباشرة
     async function sendCmd(cmd) {
       if (!gattServer || !gattServer.connected) {
         alert("غير متصل بالسيارة!");
@@ -417,7 +413,7 @@
       }
     }
 
-    // 3. استقبال ومعالجة البيانات القادمة من البلوتوث
+    // 3. استقبال واستجابة البلوتوث
     function handleWebResponse(event) {
       const decoder = new TextDecoder('utf-8');
       const text = decoder.decode(event.target.value);
@@ -430,14 +426,14 @@
       }
     }
 
-    // 4. تهيئة الشريحة
+    // 4. تهيئة شريحة vLinker لشبكة الكان بس الخاصة بكيا (500kbps CAN)
     async function initvLinker() {
       await sendCmd("AT Z");
       setTimeout(() => sendCmd("ATE0"), 200);
-      setTimeout(() => sendCmd("STP 6"), 400); // CAN Protocol
+      setTimeout(() => sendCmd("STP 6"), 400); // ISO 15765-4 CAN (11bit / 500k baud)
     }
 
-    // 5. تفسير استجابات السيارات
+    // 5. معالجة الردود المرتجعة
     function handleOBDResponse(response) {
       if(response.length > 0) writeConsole("RX: " + response);
 
@@ -467,7 +463,22 @@
       }
     }
 
-    // 6. التحكم بالواجهات
+    // 6. دالة إرسال أوامر التحكم المباشر (Bi-Directional) المخصصة لكيا
+    async function sendActuatorCmd(cmdHex) {
+      if(!isConnected) { alert("يرجى الاتصال بقطعة vLinker أولاً!"); return; }
+      
+      writeConsole("فتح الجلسة الموسعة ECU Extended Session (Kia)...");
+      // فتح الجلسة التشخيصية لكمبيوتر كيا
+      await sendCmd('10 03');
+      
+      // إرسال كود التحكم بعد تأخير بسيط
+      setTimeout(async () => {
+        writeConsole("إرسال أمر تحفيز المكون: " + cmdHex);
+        await sendCmd(cmdHex);
+      }, 300);
+    }
+
+    // 7. فتح التحكم بالواجهات
     function openModule(moduleName) {
       document.getElementById('modalTitle').innerText = moduleName;
       const body = document.getElementById('modalBody');
@@ -475,33 +486,33 @@
       if (moduleName === 'Special Function') {
         body.innerHTML = `
           <p style="color: #475569; font-size: 0.88rem; margin-bottom: 12px; line-height: 1.4;">
-            <strong>التحكم الثنائي والتحفيز التفاعلي (Bi-Directional Control / Active Tests):</strong><br>
-            إرسال أوامر تحفيز مباشرة للأجزاء عبر المتصفح.
+            <strong>اختبارات التحفيز والتحكم المباشر (Kia Sorento 2012):</strong><br>
+            تأكد أن السويتش مفتوح (Ignition ON) والمحرك مطفأ تماماً قبل إجراء الإختبارات.
           </p>
 
           <div class="test-grid">
             <div class="test-card">
               <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد</h4>
-              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 11 02 03 01')">تشغيل المروحة</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 11 02 00')">إيقاف / إعادة للـ ECU</button>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 01 03')">تشغيل المروحة (السرعة العالية)</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 01 00')">إيقاف / إرجاع للـ ECU</button>
             </div>
 
             <div class="test-card">
               <h4><i class="fa-solid fa-gas-pump" style="color:#eab308;"></i> مضخة الوقود</h4>
-              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 01 01')">تشغيل المضخة</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 01 00')">إيقاف المضخة</button>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 02 01')">تشغيل مضخة الوقود</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 02 00')">إيقاف المضخة</button>
             </div>
 
             <div class="test-card">
-              <h4><i class="fa-solid fa-smog" style="color:#64748b;"></i> صمام EGR</h4>
-              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 2E 01 64')">فتح الصمام (100%)</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 2E 01 00')">إغلاق الصمام (0%)</button>
+              <h4><i class="fa-solid fa-bolt" style="color:#64748b;"></i> ريلاي الكمبروسر (A/C)</h4>
+              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 03 01')">تشغيل ريلاي التكييف</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 03 00')">إيقاف الريلاي</button>
             </div>
 
             <div class="test-card">
-              <h4><i class="fa-solid fa-lock" style="color:#ef4444;"></i> قفل الأبواب</h4>
-              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 45 01 01')">قفل الأبواب</button>
-              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 45 01 00')">فتح الأبواب</button>
+              <h4><i class="fa-solid fa-fire-flame-simple" style="color:#ef4444;"></i> بخاخات الوقود</h4>
+              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 12 05 01')">اختبار قطع الحقن (Cyl 1)</button>
+              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 05 00')">إعادة وضع التشغيل</button>
             </div>
           </div>
         `;
@@ -537,12 +548,6 @@
     function closeModal() {
       if(liveDataInterval) clearInterval(liveDataInterval);
       document.getElementById('modalWindow').style.display = 'none';
-    }
-
-    async function sendActuatorCmd(cmd) {
-      if(!isConnected) { alert("يرجى الاتصال بقطعة vLinker أولاً!"); return; }
-      await sendCmd('10 03');
-      setTimeout(async () => { await sendCmd(cmd); }, 150);
     }
 
     function toggleLiveData() {
