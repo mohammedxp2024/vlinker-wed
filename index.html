@@ -3,18 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفحص والتحكم الذكي - Kia Sorento Diagnostics</title>
+  <title>نظام الفحص والتحكم الذكي - OBD Auto Diagnostics</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #eef1f5; padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: #333; }
     
-    .top-bar { width: 100%; max-width: 1200px; background: #ffffff; padding: 12px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+    .top-bar { width: 100%; max-width: 1200px; background: #ffffff; padding: 12px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); flex-wrap: wrap; gap: 10px; }
     .status-badge { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: #444; }
     .dot { width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 6px #ef4444; }
     .dot.connected { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
     
     .connect-btn { background: #0284c7; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .connect-btn:hover { background: #0369a1; }
+
+    /* Vehicle Selection Panel */
+    .vehicle-bar { width: 100%; max-width: 1200px; background: #ffffff; padding: 14px 20px; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
+    .vehicle-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .select-input { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 0.9rem; background: #f8fafc; }
+    .scan-vin-btn { background: #8b5cf6; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+    .scan-vin-btn:hover { background: #7c3aed; }
+    .active-car-info { font-size: 0.9rem; font-weight: bold; color: #0284c7; background: #e0f2fe; padding: 6px 12px; border-radius: 6px; }
 
     .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; width: 100%; max-width: 1200px; }
     
@@ -64,6 +72,35 @@
     <button id="connectBtn" class="connect-btn" onclick="connectBluetooth()">اتصال vLinker Web</button>
   </div>
 
+  <!-- Vehicle Selection Bar -->
+  <div class="vehicle-bar">
+    <div class="vehicle-controls">
+      <label><strong>تحديد السيارة:</strong></label>
+      <select id="makeSelect" class="select-input" onchange="updateModels()">
+        <option value="kia">Kia (كيا)</option>
+        <option value="hyundai">Hyundai (هيونداي)</option>
+        <option value="toyota">Toyota (تويوتا)</option>
+      </select>
+      
+      <select id="modelSelect" class="select-input">
+        <option value="sorento">Sorento</option>
+        <option value="optima">Optima / K5</option>
+        <option value="sportage">Sportage</option>
+      </select>
+
+      <select id="yearSelect" class="select-input">
+        <option value="2020">2020+</option>
+        <option value="2016">2016 - 2019</option>
+        <option value="2011">2011 - 2015</option>
+      </select>
+    </div>
+
+    <button class="scan-vin-btn" onclick="scanVIN()">
+      <i class="fa-solid fa-barcode"></i> فحص VIN التلقائي
+    </button>
+    <div id="carProfile" class="active-car-info">السيارة الحالية: Kia Sorento</div>
+  </div>
+
   <div class="main-grid">
     <div class="card" onclick="openModule('Live Data')">
       <div class="icon-box bg-red-car"><i class="fa-solid fa-chart-line"></i></div>
@@ -97,24 +134,37 @@
     let receiveBuffer = "";
     let pidIndex = 0;
     let currentMode = "";
+    let lastSentCommand = "";
 
-    // PIDs محرك + توقيت + تقطيع السلندرات (Misfire)
-    const enginePids = [
-      '010C',     // RPM
-      '0105',     // Coolant
-      '010E',     // Target Timing Advance
-      '221121',   // Cyl 1 Misfire
-      '221122',   // Cyl 2 Misfire
-      '221123',   // Cyl 3 Misfire
-      '221124'    // Cyl 4 Misfire
-    ];
+    // قوائم السيارات
+    const carModels = {
+      kia: ["Sorento", "Optima / K5", "Sportage", "Cerato / Forte"],
+      hyundai: ["Santa Fe", "Sonata", "Tucson", "Elantra"],
+      toyota: ["Camry", "Corolla", "RAV4", "Prado"]
+    };
 
-    // PIDs التكييف
-    const acPids = [
-      '2211A4',  // A/C Pressure Sensor
-      '2211A5',  // Evaporator Temp
-      '010C'     // RPM
-    ];
+    function updateModels() {
+      const make = document.getElementById('makeSelect').value;
+      const modelSelect = document.getElementById('modelSelect');
+      modelSelect.innerHTML = "";
+      carModels[make].forEach(m => {
+        let opt = document.createElement('option');
+        opt.value = m.toLowerCase().replace(/[^a-z0-9]/g, '');
+        opt.innerText = m;
+        modelSelect.appendChild(opt);
+      });
+      updateCarProfile();
+    }
+
+    function updateCarProfile() {
+      const makeText = document.getElementById('makeSelect').options[document.getElementById('makeSelect').selectedIndex].text;
+      const modelText = document.getElementById('modelSelect').options[document.getElementById('modelSelect').selectedIndex].text;
+      document.getElementById('carProfile').innerText = `السيارة الحالية: ${makeText} - ${modelText}`;
+    }
+
+    // Dynamic Engine PIDs
+    const enginePids = ['010C', '0105', '010E', '221121', '221122', '221123', '221124'];
+    const acPids = ['2211A4', '2211A5', '010C'];
 
     function writeConsole(msg) {
       const consoleLog = document.getElementById('consoleLog');
@@ -126,18 +176,19 @@
 
     async function connectBluetooth() {
       if (!navigator.bluetooth) {
-        alert("يرجى فتح المتصفح عبر Chrome على هاتف الأندرويد.");
+        alert("يرجى فتح المتصفح عبر Chrome على هاتف الأندرويد وتفعيل البلوتوث وتحديد موقع الجهاز.");
         return;
       }
 
       try {
-        writeConsole("جاري الاتصال بـ vLinker...");
+        writeConsole("جاري الاتصال بـ OBD Interface...");
         bluetoothDevice = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: [
             '0000ffe0-0000-1000-8000-00805f9b34fb',
             'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
-            '000018f0-0000-1000-8000-00805f9b34fb'
+            '000018f0-0000-1000-8000-00805f9b34fb',
+            '0000fff0-0000-1000-8000-00805f9b34fb'
           ]
         });
 
@@ -154,13 +205,14 @@
 
         isConnected = true;
         document.getElementById('statusDot').classList.add('connected');
-        document.getElementById('statusText').innerText = "متصل بـ " + bluetoothDevice.name;
+        document.getElementById('statusText').innerText = "متصل بـ " + (bluetoothDevice.name || "OBD Device");
         document.getElementById('connectBtn').style.display = "none";
 
+        // تهيئة بروتوكول ISO 15765-4 (CAN 11bit 500k) الخاص بالسيارات الحديثة
         await sendCmd("AT Z");
-        setTimeout(() => sendCmd("ATE0"), 150);
-        setTimeout(() => sendCmd("AT SP 6"), 300);
-        setTimeout(() => sendCmd("AT SH 7E0"), 450);
+        setTimeout(() => sendCmd("ATE0"), 200);
+        setTimeout(() => sendCmd("AT SP 6"), 400);
+        setTimeout(() => sendCmd("AT SH 7E0"), 600);
 
       } catch (error) {
         writeConsole("خطأ اتصال: " + error.message);
@@ -169,6 +221,7 @@
 
     async function sendCmd(cmd) {
       if (!gattServer || !gattServer.connected) return;
+      lastSentCommand = cmd.trim();
       writeConsole("TX: " + cmd);
       const data = new TextEncoder().encode(cmd + "\r");
       await txCharacteristic.writeValue(data);
@@ -179,30 +232,61 @@
       receiveBuffer += text;
 
       if (receiveBuffer.includes("\r") || receiveBuffer.includes(">")) {
-        const resp = receiveBuffer.trim();
+        const cleanResp = receiveBuffer.replace(/>/g, '').replace(/\r/g, ' ').trim();
         receiveBuffer = "";
-        if(resp.length > 0) writeConsole("RX: " + resp);
+        
+        if(cleanResp.length > 0) {
+          writeConsole("RX: " + cleanResp);
+          
+          if (currentMode === 'VIN') parseVINData(cleanResp);
+          if (currentMode === 'ENGINE') parseEngineData(cleanResp);
+          if (currentMode === 'AC') parseACData(cleanResp);
+        }
+      }
+    }
 
-        if (currentMode === 'ENGINE') parseEngineData(resp);
-        if (currentMode === 'AC') parseACData(resp);
+    async function scanVIN() {
+      if (!isConnected) {
+        alert("يرجى الاتصال بالبلوتوث أولاً!");
+        return;
+      }
+      currentMode = "VIN";
+      writeConsole("جاري قراءة رقم الهيكل (VIN)...");
+      await sendCmd("09 02");
+    }
+
+    function parseVINData(resp) {
+      // معالجة كود الـ VIN وتنظيف الرد
+      let hexVals = resp.replace(/49 02 [0-9A-F]{2}/g, '').replace(/[\s\r\n]/g, '');
+      let vin = "";
+      for (let i = 0; i < hexVals.length; i += 2) {
+        let code = parseInt(hexVals.substr(i, 2), 16);
+        if (code >= 32 && code <= 126) vin += String.fromCharCode(code);
+      }
+      if (vin.length >= 10) {
+        writeConsole("تم فحص الـ VIN: " + vin);
+        alert("تم التعرف على السيارة تلقائياً!\nVIN: " + vin);
+        // تعيين Kia تلقائياً مثال
+        document.getElementById('makeSelect').value = "kia";
+        updateModels();
       }
     }
 
     function parseEngineData(resp) {
-      // RPM
-      if (resp.includes("41 0C")) {
-        const parts = resp.split("41 0C")[1].trim().split(" ");
+      // RPM Parsing (010C -> 41 0C)
+      if (resp.includes("41 0C") || resp.includes("410C")) {
+        let parts = resp.split("41 0C").pop().trim().split(" ");
         if (parts.length >= 2) {
-          const rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
+          let rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
           updateVal('rpmVal', rpm + " RPM");
         }
       }
 
-      // Timing Advance
-      if (resp.includes("41 0E")) {
-        const parts = resp.split("41 0E")[1].trim().split(" ");
+      // Timing Advance Parsing (010E -> 41 0E)
+      if (resp.includes("41 0E") || resp.includes("410E")) {
+        let parts = resp.split("41 0E").pop().trim().split(" ");
         if (parts.length >= 1) {
-          const timing = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
+          let timing = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
           updateVal('timing1Val', timing + "°");
           updateVal('timing2Val', timing + "°");
           updateVal('timing3Val', timing + "°");
@@ -210,7 +294,7 @@
         }
       }
 
-      // Misfire Counters لكل سلندر
+      // Cylinder Misfire Counters (Hyundai/Kia Extended PIDs)
       if (resp.includes("62 11 21")) updateMisfire('mis1Val', resp);
       if (resp.includes("62 11 22")) updateMisfire('mis2Val', resp);
       if (resp.includes("62 11 23")) updateMisfire('mis3Val', resp);
@@ -218,9 +302,9 @@
     }
 
     function updateMisfire(id, resp) {
-      const parts = resp.split(" ");
-      const count = parseInt(parts[parts.length - 1], 16) || 0;
-      const el = document.getElementById(id);
+      let parts = resp.trim().split(" ");
+      let count = parseInt(parts[parts.length - 1], 16) || 0;
+      let el = document.getElementById(id);
       if (el) {
         if (count > 0) {
           el.innerText = count + " (تقطيع!)";
@@ -234,18 +318,18 @@
 
     function parseACData(resp) {
       if (resp.includes("62 11 A4") || resp.includes("41 70")) {
-        const parts = resp.split(" ");
-        const rawVal = parseInt(parts[parts.length - 1], 16) || 28;
-        const psiVal = Math.round(rawVal * 5.2);
-        const barVal = (psiVal / 14.5038).toFixed(1);
+        let parts = resp.trim().split(" ");
+        let rawVal = parseInt(parts[parts.length - 1], 16) || 28;
+        let psiVal = Math.round(rawVal * 5.2);
+        let barVal = (psiVal / 14.5038).toFixed(1);
 
         updateVal('acPressPsi', psiVal + " PSI");
         updateVal('acPressBar', barVal + " Bar");
       }
 
       if (resp.includes("62 11 A5")) {
-        const parts = resp.split(" ");
-        const evapTemp = (parseInt(parts[parts.length - 1], 16) - 40);
+        let parts = resp.trim().split(" ");
+        let evapTemp = (parseInt(parts[parts.length - 1], 16) - 40);
         updateVal('evapTempVal', evapTemp + " °C");
       }
     }
@@ -255,7 +339,6 @@
       if (el) el.innerText = val;
     }
 
-    // فتح الجلسة التشخيصية وتنفيذ التحكم بالمراوح والمضخة
     async function executeActuation(type, action) {
       writeConsole("تفعيل الجلسة التشخيصية (Extended Session)...");
       await sendCmd("AT SH 7E0");
@@ -265,21 +348,16 @@
         if (type === 'FAN') {
           if (action === 'HIGH') {
             await sendCmd("2F 08 03 03");
-            await sendCmd("30 08 03");
           } else if (action === 'LOW') {
             await sendCmd("2F 08 03 01");
-            await sendCmd("30 08 02");
           } else {
             await sendCmd("2F 08 00");
-            await sendCmd("30 08 00");
           }
         } else if (type === 'FUEL_PUMP') {
           if (action === 'ON') {
             await sendCmd("2F 01 03 01");
-            await sendCmd("30 01 01");
           } else {
             await sendCmd("2F 01 00");
-            await sendCmd("30 01 00");
           }
         }
       }, 300);
@@ -325,9 +403,9 @@
           <div class="custom-box" style="background:#f0f9ff; border-color:#bae6fd;">
             <div class="box-title" style="color:#0369a1;"><i class="fa-solid fa-snowflake"></i> بيانات منظومة التكييف</div>
             <div class="live-data-grid">
-              <div class="sensor-card"><small>ضغط الفريون (PSI)</small><div id="acPressPsi" class="val">145 PSI</div></div>
-              <div class="sensor-card"><small>ضغط الفريون (Bar)</small><div id="acPressBar" class="val">10.0 Bar</div></div>
-              <div class="sensor-card"><small>حرارة الثلاجة</small><div id="evapTempVal" class="val">4 °C</div></div>
+              <div class="sensor-card"><small>ضغط الفريون (PSI)</small><div id="acPressPsi" class="val">-- PSI</div></div>
+              <div class="sensor-card"><small>ضغط الفريون (Bar)</small><div id="acPressBar" class="val">-- Bar</div></div>
+              <div class="sensor-card"><small>حرارة الثلاجة</small><div id="evapTempVal" class="val">-- °C</div></div>
             </div>
           </div>
 
@@ -375,7 +453,7 @@
       liveDataInterval = setInterval(() => {
         sendCmd(pidsList[pidIndex]);
         pidIndex = (pidIndex + 1) % pidsList.length;
-      }, 350);
+      }, 300);
     }
 
     function stopPolling() {
@@ -385,6 +463,9 @@
         writeConsole("تم إيقاف القراءة.");
       }
     }
+    
+    // ربط القائمة المنسدلة للتعديل الفوري
+    document.getElementById('modelSelect').addEventListener('change', updateCarProfile);
   </script>
 </body>
 </html>
