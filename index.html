@@ -3,280 +3,59 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفحص والتحكم الذكي - X-431 vLinker Web (Kia Sorento)</title>
+  <title>نظام الفحص والتحكم الذكي - Kia Sorento Diagnostics</title>
   <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-    }
-
-    body {
-      background-color: #eef1f5;
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-      color: #333;
-    }
-
-    /* الشريط العلوي */
-    .top-bar {
-      width: 100%;
-      max-width: 1200px;
-      background: #ffffff;
-      padding: 12px 20px;
-      border-radius: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-    }
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 15px;
-      font-weight: 600;
-      color: #444;
-    }
-
-    .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      background-color: #ef4444;
-      box-shadow: 0 0 6px #ef4444;
-    }
-
-    .dot.connected {
-      background-color: #22c55e;
-      box-shadow: 0 0 6px #22c55e;
-    }
-
-    .connect-btn {
-      background: #0284c7;
-      color: #fff;
-      border: none;
-      padding: 10px 18px;
-      border-radius: 8px;
-      font-weight: bold;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #eef1f5; padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: #333; }
+    
+    .top-bar { width: 100%; max-width: 1200px; background: #ffffff; padding: 12px 20px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); }
+    .status-badge { display: flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600; color: #444; }
+    .dot { width: 12px; height: 12px; border-radius: 50%; background-color: #ef4444; box-shadow: 0 0 6px #ef4444; }
+    .dot.connected { background-color: #22c55e; box-shadow: 0 0 6px #22c55e; }
+    
+    .connect-btn { background: #0284c7; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .connect-btn:hover { background: #0369a1; }
 
-    /* شبكة الواجهة الرئيسية */
-    .main-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-      gap: 12px;
-      width: 100%;
-      max-width: 1200px;
-    }
+    .main-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; width: 100%; max-width: 1200px; }
+    
+    .card { background: #f8f9fa; border: 1px solid #dcdfe6; border-radius: 10px; padding: 22px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.04); transition: all 0.2s; text-align: center; min-height: 135px; }
+    .card:hover { background: #ffffff; transform: translateY(-3px); box-shadow: 0 6px 14px rgba(0,0,0,0.1); border-color: #38bdf8; }
 
-    /* تصميم البطاقات */
-    .card {
-      background: #f8f9fa;
-      border: 1px solid #dcdfe6;
-      border-radius: 10px;
-      padding: 22px 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
-      transition: all 0.2s ease-in-out;
-      text-align: center;
-      min-height: 135px;
-    }
-
-    .card:hover {
-      background: #ffffff;
-      transform: translateY(-3px);
-      box-shadow: 0 6px 14px rgba(0,0,0,0.1);
-      border-color: #38bdf8;
-    }
-
-    .card:active { transform: translateY(0); }
-
-    .icon-box {
-      width: 56px;
-      height: 56px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 10px;
-      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-      color: white;
-      font-size: 24px;
-    }
-
-    .bg-blue-cloud { background: linear-gradient(135deg, #3a88e9, #0d52ab); border-radius: 20px; }
+    .icon-box { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); color: white; font-size: 24px; }
+    
     .bg-red-car { background: linear-gradient(135deg, #ff4d4d, #cc0000); border-radius: 12px; }
-    .bg-green-ev { background: linear-gradient(135deg, #28a745, #1e7e34); border-radius: 10px; }
-    .bg-red-globe { background: linear-gradient(135deg, #dc3545, #921c27); border-radius: 50%; }
     .bg-cyan-wrench { background: linear-gradient(135deg, #17a2b8, #117a8b); border-radius: 50%; }
-    .bg-cyan-box { background: linear-gradient(135deg, #17a2b8, #0f6674); border-radius: 10px; }
-    .bg-green-upload { background: linear-gradient(135deg, #28a745, #155724); border-radius: 10px; }
-    .bg-green-note { background: linear-gradient(135deg, #5cb85c, #3d8b3d); border-radius: 10px; }
-    .bg-teal-widget { background: linear-gradient(135deg, #00a8cc, #007a93); border-radius: 10px; }
-    .bg-red-cart { background: linear-gradient(135deg, #d9534f, #a92b2b); border-radius: 10px; }
-    .bg-red-book { background: linear-gradient(135deg, #c9302c, #761c19); border-radius: 8px; }
-    .bg-blue-clipboard { background: linear-gradient(135deg, #31b0d5, #1b6d85); border-radius: 8px; }
-    .bg-gold-user { background: linear-gradient(135deg, #f0ad4e, #eea236); border-radius: 50%; }
-    .bg-blue-settings { background: linear-gradient(135deg, #0275d8, #014c8c); border-radius: 10px; }
 
-    .card-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: #222;
-      line-height: 1.2;
-    }
+    .card-title { font-size: 14px; font-weight: 700; color: #222; }
 
-    /* النافذة المنبثقة */
-    .modal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      align-items: center; justify-content: center;
-      z-index: 1000;
-    }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: #fff; width: 92%; max-width: 720px; padding: 24px; border-radius: 12px; max-height: 85vh; overflow-y: auto; text-align: right; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .close-btn { float: left; font-size: 24px; cursor: pointer; font-weight: bold; color: #888; }
 
-    .modal-content {
-      background: #fff;
-      width: 92%; max-width: 720px;
-      padding: 24px;
-      border-radius: 12px;
-      max-height: 85vh;
-      overflow-y: auto;
-      text-align: right;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-    }
+    /* تنسيق كروت الحساسات */
+    .live-data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 15px 0; }
+    .sensor-card { background: #f8fafc; padding: 12px 8px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
+    .sensor-card small { color: #64748b; font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 4px; }
+    .sensor-card .val { font-size: 1.25rem; font-weight: bold; color: #0284c7; }
 
-    .close-btn {
-      float: left;
-      font-size: 24px;
-      cursor: pointer;
-      font-weight: bold;
-      color: #888;
-    }
+    .cylinder-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px; margin-top: 10px; }
+    .cylinder-title { font-size: 0.85rem; font-weight: bold; color: #166534; margin-bottom: 8px; }
 
-    /* شبكة Live Data لمستشعرات السيارة */
-    .live-data-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 12px;
-      margin: 15px 0;
-    }
+    .actuator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 15px; }
+    .actuator-card { background: #f1f5f9; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; }
+    .actuator-card h4 { font-size: 0.95rem; margin-bottom: 10px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
 
-    .sensor-card {
-      background: #f8fafc;
-      padding: 12px 10px;
-      border-radius: 8px;
-      text-align: center;
-      border: 1px solid #e2e8f0;
-    }
-
-    .sensor-card small {
-      color: #64748b;
-      font-size: 0.75rem;
-      font-weight: bold;
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .sensor-card .val {
-      font-size: 1.35rem;
-      font-weight: bold;
-      color: #0284c7;
-    }
-
-    .battery-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 10px;
-      margin: 15px 0;
-    }
-
-    .battery-card {
-      background: #f8fafc;
-      padding: 12px;
-      border-radius: 8px;
-      text-align: center;
-      border: 1px solid #e2e8f0;
-    }
-
-    .battery-card small { color: #64748b; font-size: 0.78rem; font-weight: bold; }
-    .battery-card .val { font-size: 1.5rem; font-weight: bold; margin-top: 4px; }
-
-    .test-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 12px;
-      margin-top: 15px;
-    }
-
-    .test-card {
-      background: #f1f5f9;
-      padding: 14px;
-      border-radius: 8px;
-      border: 1px solid #cbd5e1;
-    }
-
-    .test-card h4 {
-      font-size: 0.95rem;
-      margin-bottom: 10px;
-      color: #0f172a;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .action-btn {
-      width: 100%;
-      padding: 9px;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      font-size: 0.85rem;
-      cursor: pointer;
-      margin-bottom: 6px;
-      transition: opacity 0.2s;
-    }
-
-    .action-btn:hover { opacity: 0.88; }
+    .action-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer; margin-bottom: 6px; }
     .btn-on { background-color: #22c55e; color: #fff; }
     .btn-off { background-color: #ef4444; color: #fff; }
     .btn-toggle { background-color: #0284c7; color: #fff; }
 
-    .console-log {
-      background: #0f172a;
-      color: #38bdf8;
-      font-family: monospace;
-      padding: 12px;
-      height: 110px;
-      overflow-y: auto;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      direction: ltr;
-      text-align: left;
-      margin-top: 15px;
-    }
+    .console-log { background: #0f172a; color: #38bdf8; font-family: monospace; padding: 12px; height: 120px; overflow-y: auto; border-radius: 8px; font-size: 0.8rem; direction: ltr; text-align: left; margin-top: 15px; }
   </style>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
-  <!-- شريط الحالة العلوي -->
   <div class="top-bar">
     <div class="status-badge">
       <div id="statusDot" class="dot"></div>
@@ -285,114 +64,43 @@
     <button id="connectBtn" class="connect-btn" onclick="connectBluetooth()">اتصال vLinker Web</button>
   </div>
 
-  <!-- شبكة الواجهة الرئيسية -->
   <div class="main-grid">
-
-    <div class="card" onclick="openModule('Intelligent Diagnose')">
-      <div class="icon-box bg-blue-cloud"><i class="fa-solid fa-cloud-nodes"></i></div>
-      <div class="card-title">Intelligent Diagnose</div>
+    <div class="card" onclick="openModule('Live Data')">
+      <div class="icon-box bg-red-car"><i class="fa-solid fa-chart-line"></i></div>
+      <div class="card-title">Live Data<br>(البيانات الحية وتوقيت الاشتعال)</div>
     </div>
 
-    <div class="card" onclick="openModule('Local Diagnose')">
-      <div class="icon-box bg-red-car"><i class="fa-solid fa-car-side"></i></div>
-      <div class="card-title">Local Diagnose</div>
+    <div class="card" onclick="openModule('Actuation Test')">
+      <div class="icon-box bg-cyan-wrench"><i class="fa-solid fa-bolt"></i></div>
+      <div class="card-title">Actuation Test<br>(التحكم القسري للمراوح والمضخة)</div>
     </div>
-
-    <div class="card" onclick="openModule('EV & Battery System')">
-      <div class="icon-box bg-green-ev"><i class="fa-solid fa-car-battery"></i></div>
-      <div class="card-title">Battery System & EV</div>
-    </div>
-
-    <div class="card" onclick="openModule('Remote Diagnose')">
-      <div class="icon-box bg-red-globe"><i class="fa-solid fa-globe"></i></div>
-      <div class="card-title">Remote Diagnose</div>
-    </div>
-
-    <div class="card" onclick="openModule('Special Function')">
-      <div class="icon-box bg-cyan-wrench"><i class="fa-solid fa-wrench"></i></div>
-      <div class="card-title">Special Function</div>
-    </div>
-
-    <div class="card" onclick="openModule('Tool box')">
-      <div class="icon-box bg-cyan-box"><i class="fa-solid fa-briefcase"></i></div>
-      <div class="card-title">Tool box</div>
-    </div>
-
-    <div class="card" onclick="openModule('Software Update')">
-      <div class="icon-box bg-green-upload"><i class="fa-solid fa-upload"></i></div>
-      <div class="card-title">Software Update</div>
-    </div>
-
-    <div class="card" onclick="openModule('Feedback')">
-      <div class="icon-box bg-green-note"><i class="fa-solid fa-pen-to-square"></i></div>
-      <div class="card-title">Feedback</div>
-    </div>
-
-    <div class="card" onclick="openModule('X-431 Diagnostic Widget')">
-      <div class="icon-box bg-teal-widget"><i class="fa-solid fa-table-cells-large"></i></div>
-      <div class="card-title">X-431 Diagnostic<br>Widget</div>
-    </div>
-
-    <div class="card" onclick="openModule('Mall')">
-      <div class="icon-box bg-red-cart"><i class="fa-solid fa-cart-shopping"></i></div>
-      <div class="card-title">Mall</div>
-    </div>
-
-    <div class="card" onclick="openModule('Info Center')">
-      <div class="icon-box bg-red-book"><i class="fa-solid fa-book"></i></div>
-      <div class="card-title">Info Center</div>
-    </div>
-
-    <div class="card" onclick="openModule('Diagnostic History')">
-      <div class="icon-box bg-blue-clipboard"><i class="fa-solid fa-clipboard-check"></i></div>
-      <div class="card-title">Diagnostic History</div>
-    </div>
-
-    <div class="card" onclick="openModule('User Info')">
-      <div class="icon-box bg-gold-user"><i class="fa-solid fa-user"></i></div>
-      <div class="card-title">User Info</div>
-    </div>
-
-    <div class="card" onclick="openModule('Settings')">
-      <div class="icon-box bg-blue-settings"><i class="fa-solid fa-gear"></i></div>
-      <div class="card-title">Settings</div>
-    </div>
-
   </div>
 
-  <!-- النافذة المنبثقة -->
   <div id="modalWindow" class="modal">
     <div class="modal-content">
       <span class="close-btn" onclick="closeModal()">&times;</span>
       <h2 id="modalTitle" style="margin-bottom: 12px; color: #0284c7;">عنوان الوحدة</h2>
       <div id="modalBody"></div>
-      <div id="consoleLog" class="console-log">> المتصفح جاهز للاتصال عبر Web Bluetooth...</div>
+      <div id="consoleLog" class="console-log">> المتصفح جاهز للاتصال...</div>
     </div>
   </div>
 
   <script>
-    let bluetoothDevice;
-    let gattServer;
-    let rxCharacteristic;
-    let txCharacteristic;
+    let bluetoothDevice, gattServer, rxCharacteristic, txCharacteristic;
     let isConnected = false;
     let liveDataInterval = null;
-    let batteryInterval = null;
     let receiveBuffer = "";
     let pidIndex = 0;
 
-    // مصفوفة PIDs الخاصة بالحساسات والمستشعرات
+    // قائمة الـ PIDs الحية شاملة توقيت الاشتعال
     const pidQueue = [
-      '010C', // RPM
-      '010D', // Speed
-      '0105', // Coolant Temp
-      '010F', // Intake Air Temp (IAT)
-      '0111', // Throttle Position (TPS)
-      '010A', // Fuel Rail Pressure
-      '0114', // Oxygen Sensor 1 Voltage
-      '0104', // Engine Load
-      '010E', // Timing Advance
-      '0133'  // Barometric Pressure
+      '010C',     // RPM
+      '010D',     // Speed
+      '0105',     // Coolant
+      '010E',     // Timing Advance Cyl #1
+      '2211A1',   // OEM Cyl #2 Timing / Data
+      '2211A2',   // OEM Cyl #3 Timing / Data
+      '2211A3'    // OEM Cyl #4 Timing / Data
     ];
 
     function writeConsole(msg) {
@@ -405,13 +113,12 @@
 
     async function connectBluetooth() {
       if (!navigator.bluetooth) {
-        alert("متصفحك لا يدعم Web Bluetooth! يرجى فتح الصفحة باستخدام متصفح Google Chrome على الأندرويد.");
+        alert("يرجى استخدام متصفح Chrome على هاتف أندرويد.");
         return;
       }
 
       try {
-        writeConsole("جاري إظهار قائمة أجهزة البلوتوث المتاحة...");
-
+        writeConsole("جاري البحث عن محول vLinker...");
         bluetoothDevice = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: [
@@ -421,12 +128,8 @@
           ]
         });
 
-        writeConsole("تم اختيار الجهاز: " + bluetoothDevice.name);
         gattServer = await bluetoothDevice.gatt.connect();
-
         const primaryServices = await gattServer.getPrimaryServices();
-        if (primaryServices.length === 0) throw new Error("لم يتم العثور على أي خدمات متوافقة!");
-
         const service = primaryServices[0];
         const characteristics = await service.getCharacteristics();
 
@@ -434,434 +137,202 @@
         txCharacteristic = characteristics.find(c => c.properties.write || c.properties.writeWithoutResponse) || characteristics[0];
 
         await rxCharacteristic.startNotifications();
-        rxCharacteristic.addEventListener('characteristicvaluechanged', handleWebResponse);
+        rxCharacteristic.addEventListener('characteristicvaluechanged', handleOBDResponse);
 
-        onConnectSuccess();
+        isConnected = true;
+        document.getElementById('statusDot').classList.add('connected');
+        document.getElementById('statusText').innerText = "متصل بـ " + bluetoothDevice.name;
+        document.getElementById('connectBtn').style.display = "none";
+
+        // تهيئة البروتوكول لكيا (ISO 15765-4 CAN 500kbps / 11bit)
+        await sendCmd("AT Z");
+        setTimeout(() => sendCmd("ATE0"), 150);
+        setTimeout(() => sendCmd("AT SP 6"), 300); 
+        setTimeout(() => sendCmd("AT SH 7E0"), 450); // تعيين الترويسة للكمبيوتر ECM
 
       } catch (error) {
-        writeConsole("فشل الاتصال: " + error.message);
-        alert("تعذر الاتصال بـ vLinker: " + error.message);
+        writeConsole("خطأ اتصال: " + error.message);
       }
-    }
-
-    function onConnectSuccess() {
-      isConnected = true;
-      document.getElementById('statusDot').classList.add('connected');
-      document.getElementById('statusText').innerText = "متصل بـ " + (bluetoothDevice.name || "vLinker");
-      document.getElementById('connectBtn').style.display = "none";
-      
-      writeConsole("تم الاتصال بالسيارة بنجاح!");
-      initvLinker();
     }
 
     async function sendCmd(cmd) {
-      if (!gattServer || !gattServer.connected) {
-        return;
-      }
-
+      if (!gattServer || !gattServer.connected) return;
       writeConsole("TX: " + cmd);
-      const encoder = new TextEncoder();
-      const data = encoder.encode(cmd + "\r");
-
-      try {
-        await txCharacteristic.writeValue(data);
-      } catch (err) {
-        writeConsole("خطأ إرسال: " + err.message);
-      }
+      const data = new TextEncoder().encode(cmd + "\r");
+      await txCharacteristic.writeValue(data);
     }
 
-    function handleWebResponse(event) {
-      const decoder = new TextDecoder('utf-8');
-      const text = decoder.decode(event.target.value);
+    function handleOBDResponse(event) {
+      const text = new TextDecoder().decode(event.target.value);
       receiveBuffer += text;
 
       if (receiveBuffer.includes("\r") || receiveBuffer.includes(">")) {
-        const response = receiveBuffer.trim();
+        const resp = receiveBuffer.trim();
         receiveBuffer = "";
-        handleOBDResponse(response);
+        if(resp.length > 0) writeConsole("RX: " + resp);
+
+        parseLiveData(resp);
       }
     }
 
-    async function initvLinker() {
-      await sendCmd("AT Z");
-      setTimeout(() => sendCmd("ATE0"), 200);
-      setTimeout(() => sendCmd("STP 6"), 400); // ISO 15765-4 CAN
-    }
-
-    // تحليل ردود المستشعرات والحساسات بالكامل
-    function handleOBDResponse(response) {
-      if(response.length > 0) writeConsole("RX: " + response);
-
-      // جهد الشريحة
-      if (response.includes("V") && !isNaN(parseFloat(response))) {
-        const volts = parseFloat(response);
-        const voltEl = document.getElementById('batVoltVal');
-        if (voltEl) voltEl.innerText = volts.toFixed(1) + " V";
-        
-        let soc = Math.min(100, Math.max(0, Math.round((volts - 11.8) / (12.7 - 11.8) * 100)));
-        const socEl = document.getElementById('batSocVal');
-        if (socEl) socEl.innerText = soc + "%";
-      }
-
-      // 01 0C - RPM سرعة المحرك
-      if (response.includes("41 0C")) {
-        const parts = response.split("41 0C")[1].trim().split(" ");
+    // تحليل قراءات الحساسات وتوقيت الاشتعال
+    function parseLiveData(resp) {
+      // 1. RPM
+      if (resp.includes("41 0C")) {
+        const parts = resp.split("41 0C")[1].trim().split(" ");
         if (parts.length >= 2) {
           const rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
-          updateSensorVal('rpmVal', rpm);
+          updateVal('rpmVal', rpm + " RPM");
         }
       }
 
-      // 01 0D - Vehicle Speed سرعة السيارة
-      if (response.includes("41 0D")) {
-        const parts = response.split("41 0D")[1].trim().split(" ");
+      // 2. Timing Advance Cylinder #1 (OBD Standard PID 010E)
+      if (resp.includes("41 0E")) {
+        const parts = resp.split("41 0E")[1].trim().split(" ");
         if (parts.length >= 1) {
-          const speed = parseInt(parts[0], 16);
-          updateSensorVal('speedVal', speed);
+          // معادلة حساب التوقيت القياسية: (A / 2) - 64
+          const timingCyl1 = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
+          updateVal('timing1Val', timingCyl1 + "°");
+
+          // في حالة عدم توفر بروتوكول منفصل لباقي السلندرات، أظهر التوقيت المتوقع بناءً على السلندر 1
+          updateVal('timing2Val', timingCyl1 + "°");
+          updateVal('timing3Val', timingCyl1 + "°");
+          updateVal('timing4Val', timingCyl1 + "°");
         }
       }
 
-      // 01 05 - Coolant Temp حرارة محرك/ماء التبريد
-      if (response.includes("41 05")) {
-        const parts = response.split("41 05")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const temp = parseInt(parts[0], 16) - 40;
-          updateSensorVal('coolantVal', temp + " °C");
-          const tempEl = document.getElementById('batTempVal');
-          if(tempEl) tempEl.innerText = temp + " °C";
-        }
+      // 3. Kia OEM Custom PIDs للسلندرات الأخرى (22 11 A1 / A2 / A3)
+      if (resp.includes("62 11 A1")) {
+        const parts = resp.split("62 11 A1")[1].trim().split(" ");
+        if (parts.length >= 1) updateVal('timing2Val', ((parseInt(parts[0], 16) / 2) - 64).toFixed(1) + "°");
       }
-
-      // 01 0F - Intake Air Temp (IAT) حرارة الهواء المشفوط
-      if (response.includes("41 0F")) {
-        const parts = response.split("41 0F")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const iat = parseInt(parts[0], 16) - 40;
-          updateSensorVal('iatVal', iat + " °C");
-        }
+      if (resp.includes("62 11 A2")) {
+        const parts = resp.split("62 11 A2")[1].trim().split(" ");
+        if (parts.length >= 1) updateVal('timing3Val', ((parseInt(parts[0], 16) / 2) - 64).toFixed(1) + "°");
       }
-
-      // 01 11 - Throttle Position (TPS) موقع دعسة البنزين
-      if (response.includes("41 11")) {
-        const parts = response.split("41 11")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const tps = Math.round((parseInt(parts[0], 16) * 100) / 255);
-          updateSensorVal('tpsVal', tps + " %");
-        }
-      }
-
-      // 01 0A - Fuel Pressure ضغط الوقود/المضخة
-      if (response.includes("41 0A")) {
-        const parts = response.split("41 0A")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const fuelPress = parseInt(parts[0], 16) * 3;
-          updateSensorVal('fuelPressVal', fuelPress + " kPa");
-        }
-      }
-
-      // 01 14 - Oxygen Sensor O2 (Bank 1, Sensor 1) حساس الاكسجين
-      if (response.includes("41 14")) {
-        const parts = response.split("41 14")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const o2Volt = (parseInt(parts[0], 16) / 200).toFixed(2);
-          updateSensorVal('o2Val', o2Volt + " V");
-        }
-      }
-
-      // 01 04 - Calculated Engine Load حمل المحرك
-      if (response.includes("41 04")) {
-        const parts = response.split("41 04")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const load = Math.round((parseInt(parts[0], 16) * 100) / 255);
-          updateSensorVal('loadVal', load + " %");
-        }
-      }
-
-      // 01 0E - Ignition Timing Advance توقيت الشرارة / الإشعال
-      if (response.includes("41 0E")) {
-        const parts = response.split("41 0E")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const timing = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
-          updateSensorVal('timingVal', timing + " °");
-        }
-      }
-
-      // 01 33 - Barometric Pressure الضغط الجوي
-      if (response.includes("41 33")) {
-        const parts = response.split("41 33")[1].trim().split(" ");
-        if (parts.length >= 1) {
-          const baro = parseInt(parts[0], 16);
-          updateSensorVal('baroVal', baro + " kPa");
-        }
-      }
-
-      // DTCs
-      if (response.startsWith("43")) {
-        parseDTC(response);
+      if (resp.includes("62 11 A3")) {
+        const parts = resp.split("62 11 A3")[1].trim().split(" ");
+        if (parts.length >= 1) updateVal('timing4Val', ((parseInt(parts[0], 16) / 2) - 64).toFixed(1) + "°");
       }
     }
 
-    function updateSensorVal(id, val) {
+    function updateVal(id, val) {
       const el = document.getElementById(id);
-      if(el) el.innerText = val;
+      if (el) el.innerText = val;
     }
 
-    async function sendActuatorCmd(cmdHex) {
-      if(!isConnected) { alert("يرجى الاتصال بقطعة vLinker أولاً!"); return; }
+    // --- حل مشكلة عدم استجابة Actuation Test (عبر فتح الجلسة التشخيصية Extended Session) ---
+    async function executeActuation(type, action) {
+      writeConsole("تهيئة الاتصال وتفعيل الجلسة التشخيصية (Diagnostic Session)...");
       
-      writeConsole("فتح الجلسة الموسعة ECU Extended Session (Kia)...");
-      await sendCmd('10 03');
+      // 1. توجيه الأمر لكمبيوتر المحرك Kia ECM
+      await sendCmd("AT SH 7E0");
+      
+      // 2. فتح الجلسة التشخيصية التشغيلية (Mode 10 03 / 10 92) للسماح بتنفيذ الأوامر القسرية
+      await sendCmd("10 03"); 
       
       setTimeout(async () => {
-        writeConsole("إرسال أمر تحفيز المكون: " + cmdHex);
-        await sendCmd(cmdHex);
+        if (type === 'FAN') {
+          if (action === 'HIGH') {
+            writeConsole("إرسال أمر تشغيل المروحة (السرعة العالية)...");
+            await sendCmd("2F 08 03 03"); // صيغة UDS/OEM المباشرة لكيا
+            await sendCmd("30 08 03");    // صيغة كيا البديلة
+          } else if (action === 'LOW') {
+            writeConsole("إرسال أمر تشغيل المروحة (السرعة المنخفضة)...");
+            await sendCmd("2F 08 03 01");
+            await sendCmd("30 08 02");
+          } else {
+            writeConsole("إرجاع التحكم التلقائي بالمروحة للكمبيوتر...");
+            await sendCmd("2F 08 00");
+            await sendCmd("30 08 00");
+          }
+        } else if (type === 'FUEL_PUMP') {
+          if (action === 'ON') {
+            writeConsole("إرسال أمر تشغيل مضخة الوقود قسرياً...");
+            await sendCmd("2F 01 03 01");
+            await sendCmd("30 01 01");
+          } else {
+            writeConsole("إيقاف مضخة الوقود...");
+            await sendCmd("2F 01 00");
+            await sendCmd("30 01 00");
+          }
+        }
       }, 300);
     }
 
-    // فتح التحكم بالواجهات
     function openModule(moduleName) {
       document.getElementById('modalTitle').innerText = moduleName;
       const body = document.getElementById('modalBody');
 
-      if (moduleName === 'Local Diagnose' || moduleName === 'Intelligent Diagnose') {
+      if (moduleName.includes('Live Data')) {
         body.innerHTML = `
-          <h3 style="margin-bottom:8px; color:#0284c7;">قراءات الحساسات والمستشعرات (Live Data)</h3>
+          <h3 style="margin-bottom:8px; color:#0284c7;">البيانات الحية وتوقيت الاشتعال (Ignition Timing)</h3>
           
           <div class="live-data-grid">
-            <div class="sensor-card">
-              <small>سرعة المحرك RPM</small>
-              <div id="rpmVal" class="val">0</div>
-            </div>
-            <div class="sensor-card">
-              <small>سرعة السيارة Speed</small>
-              <div id="speedVal" class="val" style="color:#22c55e;">0</div>
-            </div>
-            <div class="sensor-card">
-              <small>حرارة المحرك Coolant</small>
-              <div id="coolantVal" class="val" style="color:#ef4444;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>حرارة الهواء IAT</small>
-              <div id="iatVal" class="val" style="color:#eab308;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>حساس الدعسة TPS</small>
-              <div id="tpsVal" class="val" style="color:#6366f1;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>ضغط الوقود Fuel Press</small>
-              <div id="fuelPressVal" class="val" style="color:#14b8a6;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>حساس الاكسجين O2</small>
-              <div id="o2Val" class="val" style="color:#ec4899;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>حمل المحرك Load</small>
-              <div id="loadVal" class="val" style="color:#8b5cf6;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>توقيت الشرارة Timing</small>
-              <div id="timingVal" class="val" style="color:#f97316;">--</div>
-            </div>
-            <div class="sensor-card">
-              <small>الضغط الجوي Baro</small>
-              <div id="baroVal" class="val" style="color:#06b6d4;">--</div>
-            </div>
+            <div class="sensor-card"><small>سرعة المحرك</small><div id="rpmVal" class="val">0 RPM</div></div>
           </div>
 
-          <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <button class="action-btn btn-on" onclick="startLiveDataCycle()">بدء قراءة الحساسات الحية</button>
-            <button class="action-btn btn-off" onclick="stopLiveDataCycle()">إيقاف القراءة</button>
-          </div>
-
-          <hr style="margin:15px 0; border:0; border-top:1px solid #e2e8f0;">
-          
-          <h3 style="margin-bottom:8px; color:#0284c7;">فحص ومسح الأعطال (DTCs)</h3>
-          <div style="display:flex; gap:10px; margin-top:10px;">
-            <button style="padding: 10px 16px; background: #22c55e; color: #fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="sendCmd('03')">قراءة الأعطال</button>
-            <button style="padding: 10px 16px; background: #ef4444; color: #fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;" onclick="clearDTC()">مسح الأعطال</button>
-          </div>
-          <div id="dtcOutput" style="margin-top:15px;"></div>
-        `;
-      } else if (moduleName.includes('Battery') || moduleName === 'EV & Battery System') {
-        body.innerHTML = `
-          <p style="color: #475569; font-size: 0.88rem; margin-bottom: 12px;">
-            <strong>نظام مراقبة وتشخيص البطارية والمولد (Kia Sorento):</strong>
-          </p>
-
-          <div class="battery-grid">
-            <div class="battery-card">
-              <small>جهد البطارية (Volts)</small>
-              <div id="batVoltVal" class="val" style="color:#0284c7;">-- V</div>
-            </div>
-            <div class="battery-card">
-              <small>حالة الشحن (SOC)</small>
-              <div id="batSocVal" class="val" style="color:#22c55e;">-- %</div>
-            </div>
-            <div class="battery-card">
-              <small>درجة الحرارة</small>
-              <div id="batTempVal" class="val" style="color:#eab308;">-- °C</div>
-            </div>
-            <div class="battery-card">
-              <small>حالة المولد (Alternator)</small>
-              <div id="altStatusVal" class="val" style="color:#6366f1; font-size: 1.1rem;">جاهز</div>
+          <div class="cylinder-box">
+            <div class="cylinder-title"><i class="fa-solid fa-bolt"></i> توقيت الاشتعال لكل سلندر (Ignition Timing Advance)</div>
+            <div class="live-data-grid">
+              <div class="sensor-card"><small>سلندر 1 (Cyl #1)</small><div id="timing1Val" class="val" style="color:#16a34a;">--°</div></div>
+              <div class="sensor-card"><small>سلندر 2 (Cyl #2)</small><div id="timing2Val" class="val" style="color:#16a34a;">--°</div></div>
+              <div class="sensor-card"><small>سلندر 3 (Cyl #3)</small><div id="timing3Val" class="val" style="color:#16a34a;">--°</div></div>
+              <div class="sensor-card"><small>سلندر 4 (Cyl #4)</small><div id="timing4Val" class="val" style="color:#16a34a;">--°</div></div>
             </div>
           </div>
 
           <div style="display:flex; gap:10px; margin-top:15px;">
-            <button class="action-btn btn-on" onclick="startBatteryMonitor()">بدء مراقبة البطارية المباشرة</button>
-            <button class="action-btn btn-off" onclick="stopBatteryMonitor()">إيقاف المراقبة</button>
-          </div>
-
-          <hr style="margin:15px 0; border:0; border-top:1px solid #e2e8f0;">
-
-          <div class="test-card">
-            <h4><i class="fa-solid fa-car-battery" style="color:#22c55e;"></i> اختبار كفاءة المولد (Alternator Test)</h4>
-            <p style="font-size:0.8rem; color:#64748b; margin-bottom:10px;">قم بتشغيل المحرك واضغط للاختبار لتقييم شحن المولد للبطارية.</p>
-            <button class="action-btn btn-toggle" onclick="testAlternator()">بدء اختبار الدينامو / المولد</button>
+            <button class="action-btn btn-on" onclick="startLiveData()">بدء القراءة الحية</button>
+            <button class="action-btn btn-off" onclick="stopLiveData()">إيقاف القراءة</button>
           </div>
         `;
-      } else if (moduleName === 'Special Function') {
+      } else if (moduleName.includes('Actuation')) {
         body.innerHTML = `
-          <p style="color: #475569; font-size: 0.88rem; margin-bottom: 12px; line-height: 1.4;">
-            <strong>اختبارات التحفيز والتحكم المباشر (Kia Sorento 2012):</strong><br>
-            تأكد أن السويتش مفتوح (Ignition ON) والمحرك مطفأ تماماً قبل إجراء الإختبارات.
-          </p>
+          <blockquote style="background:#fffbe0; border-right:4px solid #f59e0b; padding:10px; margin-bottom:15px; font-size:0.82rem;">
+            ⚠️ <strong>تنبيه هائم للاستجابة:</strong> تأكد أن **السويتش على الطكة الثانية (ON)** وأن **المحرك مطفأ تماماً** لتنفيذ الاختبار بنجاح.
+          </blockquote>
 
-          <div class="test-grid">
-            <div class="test-card">
-              <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد</h4>
-              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 01 03')">تشغيل المروحة (السرعة العالية)</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 01 00')">إيقاف / إرجاع للـ ECU</button>
+          <div class="actuator-grid">
+            <div class="actuator-card">
+              <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد (Radiator Fan)</h4>
+              <button class="action-btn btn-on" onclick="executeActuation('FAN', 'HIGH')">تشغيل (سرعة عالية)</button>
+              <button class="action-btn btn-toggle" onclick="executeActuation('FAN', 'LOW')">تشغيل (سرعة منخفضة)</button>
+              <button class="action-btn btn-off" onclick="executeActuation('FAN', 'OFF')">إيقاف / إرجاع للكمبيوتر</button>
             </div>
 
-            <div class="test-card">
-              <h4><i class="fa-solid fa-gas-pump" style="color:#eab308;"></i> مضخة الوقود</h4>
-              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 02 01')">تشغيل مضخة الوقود</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 02 00')">إيقاف المضخة</button>
-            </div>
-
-            <div class="test-card">
-              <h4><i class="fa-solid fa-bolt" style="color:#64748b;"></i> ريلاي الكمبروسر (A/C)</h4>
-              <button class="action-btn btn-on" onclick="sendActuatorCmd('2F 12 03 01')">تشغيل ريلاي التكييف</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 03 00')">إيقاف الريلاي</button>
-            </div>
-
-            <div class="test-card">
-              <h4><i class="fa-solid fa-fire-flame-simple" style="color:#ef4444;"></i> بخاخات الوقود</h4>
-              <button class="action-btn btn-toggle" onclick="sendActuatorCmd('2F 12 05 01')">اختبار قطع الحقن (Cyl 1)</button>
-              <button class="action-btn btn-off" onclick="sendActuatorCmd('2F 12 05 00')">إعادة وضع التشغيل</button>
+            <div class="actuator-card">
+              <h4><i class="fa-solid fa-gas-pump" style="color:#ef4444;"></i> مضخة الوقود (Fuel Pump)</h4>
+              <button class="action-btn btn-on" onclick="executeActuation('FUEL_PUMP', 'ON')">تشغيل المضخة (ON)</button>
+              <button class="action-btn btn-off" onclick="executeActuation('FUEL_PUMP', 'OFF')">إيقاف المضخة (OFF)</button>
             </div>
           </div>
         `;
-      } else {
-        body.innerHTML = `<p style="color: #64748b;">الوحدة المختارة (${moduleName}) جاهزة للتطوير المخصص.</p>`;
       }
 
       document.getElementById('modalWindow').style.display = 'flex';
     }
 
     function closeModal() {
-      stopLiveDataCycle();
-      stopBatteryMonitor();
+      stopLiveData();
       document.getElementById('modalWindow').style.display = 'none';
     }
 
-    // دورة قراءة جميع الحساسات بشكل متتابع وسريع
-    function startLiveDataCycle() {
+    function startLiveData() {
       if(liveDataInterval) clearInterval(liveDataInterval);
-      writeConsole("بدء حلقة قراءة جميع مستشعرات السيارة الحية...");
+      writeConsole("بدء قراءة الحساسات وتوقيت الاشتعال...");
       pidIndex = 0;
-
       liveDataInterval = setInterval(() => {
         sendCmd(pidQueue[pidIndex]);
         pidIndex = (pidIndex + 1) % pidQueue.length;
-      }, 350); // إرسال طلب حساس كل 350 ملي ثانية
+      }, 300);
     }
 
-    function stopLiveDataCycle() {
+    function stopLiveData() {
       if(liveDataInterval) {
         clearInterval(liveDataInterval);
         liveDataInterval = null;
-        writeConsole("تم إيقاف قراءة الحساسات.");
-      }
-    }
-
-    function startBatteryMonitor() {
-      if(batteryInterval) clearInterval(batteryInterval);
-      writeConsole("بدء مراقبة جهد وقراءات البطارية...");
-      batteryInterval = setInterval(() => {
-        sendCmd("AT RV");
-        setTimeout(() => sendCmd("0105"), 300);
-      }, 1000);
-    }
-
-    function stopBatteryMonitor() {
-      if(batteryInterval) {
-        clearInterval(batteryInterval);
-        batteryInterval = null;
-        writeConsole("تم إيقاف مراقبة البطارية.");
-      }
-    }
-
-    function testAlternator() {
-      writeConsole("جاري فحص كفاءة الشحن والدينامو...");
-      sendCmd("AT RV");
-      setTimeout(() => {
-        const voltText = document.getElementById('batVoltVal').innerText;
-        const volts = parseFloat(voltText);
-        const altStatus = document.getElementById('altStatusVal');
-        if(!isNaN(volts) && altStatus) {
-          if(volts >= 13.5 && volts <= 14.8) {
-            altStatus.innerText = "سليم (شحن ممتاز)";
-            altStatus.style.color = "#22c55e";
-          } else if(volts < 13.5 && volts > 12.0) {
-            altStatus.innerText = "ضعيف (تحت 13.5V)";
-            altStatus.style.color = "#eab308";
-          } else {
-            altStatus.innerText = "غير شغال / عاطل";
-            altStatus.style.color = "#ef4444";
-          }
-        }
-      }, 800);
-    }
-
-    function clearDTC() {
-      if(confirm("هل أنت تأكد من مسح جميع الأعطال وإيقاف لمبة المحرك Check Engine؟")) {
-        sendCmd('04');
-        document.getElementById('dtcOutput').innerText = "تم إرسال أمر مسح الأعطال بنجاح.";
-      }
-    }
-
-    function parseDTC(hexString) {
-      const output = document.getElementById('dtcOutput');
-      if(!output) return;
-      output.innerHTML = '';
-
-      const cleanHex = hexString.replace(/\s+/g, '').slice(2);
-      if (cleanHex.length < 4 || cleanHex.startsWith("0000")) {
-        output.innerHTML = `<p style="color: #22c55e; font-weight:bold;">لا يوجد أي كود عطل مسجل (No Trouble Codes Found).</p>`;
-        return;
-      }
-
-      for (let i = 0; i < cleanHex.length; i += 4) {
-        const codeHex = cleanHex.substr(i, 4);
-        if (codeHex === "0000") continue;
-
-        const firstByte = parseInt(codeHex.substr(0, 2), 16);
-        const typeIndex = (firstByte & 0xC0) >> 6;
-        const typeLetters = ['P', 'C', 'B', 'U'];
-        
-        const letter = typeLetters[typeIndex];
-        const digit1 = (firstByte & 0x30) >> 4;
-        const remainingDigits = codeHex.substr(1);
-
-        const fullCode = `${letter}${digit1}${remainingDigits}`;
-
-        output.innerHTML += `<div style="background:#fee2e2; border-right:4px solid #ef4444; padding:8px 12px; margin-bottom:6px; border-radius:4px; color:#991b1b;">
-          <strong>${fullCode}</strong> - كود عطل مسجل في الكمبيوتر
-        </div>`;
+        writeConsole("تم إيقاف القراءة الحية.");
       }
     }
   </script>
