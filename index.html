@@ -31,6 +31,7 @@
     .icon-box { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); color: white; font-size: 24px; }
     
     .bg-red-car { background: linear-gradient(135deg, #ff4d4d, #cc0000); border-radius: 12px; }
+    .bg-orange-fire { background: linear-gradient(135deg, #f97316, #ea580c); border-radius: 12px; }
     .bg-blue-ac { background: linear-gradient(135deg, #06b6d4, #0284c7); border-radius: 12px; }
     .bg-cyan-wrench { background: linear-gradient(135deg, #17a2b8, #117a8b); border-radius: 50%; }
 
@@ -45,10 +46,17 @@
     .sensor-card small { color: #64748b; font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 4px; }
     .sensor-card .val { font-size: 1.2rem; font-weight: bold; color: #0284c7; }
 
+    /* تصميم بطاقات غرف الاحتراق المخصصة */
+    .cylinder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
+    .cylinder-card { background: #ffffff; border: 2px solid #e2e8f0; border-radius: 10px; padding: 14px; text-align: center; position: relative; transition: all 0.3s; }
+    .cylinder-card.faulty { border-color: #ef4444; background: #fff5f5; }
+    .cylinder-title { font-weight: bold; font-size: 1rem; color: #1e293b; margin-bottom: 6px; }
+    .cylinder-status { font-size: 0.8rem; font-weight: bold; padding: 4px 8px; border-radius: 12px; display: inline-block; margin-bottom: 8px; background: #dcfce7; color: #15803d; }
+    .cylinder-card.faulty .cylinder-status { background: #fee2e2; color: #b91c1c; }
+
     .custom-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 14px; border-radius: 8px; margin-top: 10px; }
     .box-title { font-size: 0.9rem; font-weight: bold; color: #166534; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
 
-    /* شريط بياني لقياس ضغط الفريون */
     .gauge-container { width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; }
     .gauge-fill { height: 100%; width: 0%; background: #0284c7; transition: width 0.3s, background-color 0.3s; }
 
@@ -61,6 +69,8 @@
     .btn-off { background-color: #ef4444; color: #fff; }
     .btn-toggle { background-color: #0284c7; color: #fff; }
     .btn-warn { background-color: #f59e0b; color: #fff; }
+
+    .alert-banner { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; padding: 10px; border-radius: 8px; margin-bottom: 12px; font-weight: bold; font-size: 0.85rem; display: none; }
 
     .console-log { background: #0f172a; color: #38bdf8; font-family: monospace; padding: 12px; height: 120px; overflow-y: auto; border-radius: 8px; font-size: 0.8rem; direction: ltr; text-align: left; margin-top: 15px; }
   </style>
@@ -107,7 +117,13 @@
   <div class="main-grid">
     <div class="card" onclick="openModule('Live Data')">
       <div class="icon-box bg-red-car"><i class="fa-solid fa-chart-line"></i></div>
-      <div class="card-title">Live Data<br>(التوقيت والتقطيع Misfire)</div>
+      <div class="card-title">Live Data<br>(التوقيت والقراءات الحية)</div>
+    </div>
+
+    <!-- الوحدة الجديدة لمراقبة غرف الاحتراق -->
+    <div class="card" onclick="openModule('Combustion Monitor')">
+      <div class="icon-box bg-orange-fire"><i class="fa-solid fa-fire-burner"></i></div>
+      <div class="card-title">Combustion System<br>(فحص غرف الاحتراق والشرارة)</div>
     </div>
 
     <div class="card" onclick="openModule('A/C Diagnostics')">
@@ -139,12 +155,11 @@
     let pidIndex = 0;
     let currentMode = "";
 
-    // 1. خريطة ملفات عقول السيارات (ECU & A/C Mapping)
     const ecuProfiles = {
       "BOSCH_ME17": {
         name: "Bosch ME17 / Sim2K standard",
         headerECM: "7E0",
-        headerAC: "7B0", // عقل المكيف/الجسم BCM أو FATC
+        headerAC: "7B0",
         acClutchOn: "2F 10 C0 01",
         acClutchOff: "2F 10 C0 00",
         fanHigh: "2F 08 03 03",
@@ -155,8 +170,7 @@
         inj1Cut: "2F 31 03 01",
         inj2Cut: "2F 32 03 01",
         inj3Cut: "2F 33 03 01",
-        inj4Cut: "2F 34 03 01",
-        evap100: "2F 12 03 64"
+        inj4Cut: "2F 34 03 01"
       },
       "SIM2K_250": {
         name: "Continental Sim2K-250/260",
@@ -172,8 +186,7 @@
         inj1Cut: "2F 11 01 01",
         inj2Cut: "2F 11 02 01",
         inj3Cut: "2F 11 03 01",
-        inj4Cut: "2F 11 04 01",
-        evap100: "2F 10 C5 64"
+        inj4Cut: "2F 11 04 01"
       },
       "TOYOTA_DENSO": {
         name: "Denso Toyota CAN",
@@ -189,8 +202,7 @@
         inj1Cut: "30 10 01 01",
         inj2Cut: "30 10 02 01",
         inj3Cut: "30 10 03 01",
-        inj4Cut: "30 10 04 01",
-        evap100: "30 05 00 64"
+        inj4Cut: "30 10 04 01"
       }
     };
 
@@ -225,17 +237,22 @@
       document.getElementById('carProfile').innerText = `السيارة الحالية: ${makeText} - ${modelText} (${activeProfile.name})`;
     }
 
-    const enginePids = ['010C', '0105', '010E', '221121', '221122', '221123', '221124'];
+    const enginePids = ['010C', '0105', '010E'];
     
-    // قائمة أوامر PIDs الشاملة لفحص التكييف المطور
-    const acPids = [
-      '010C',     // سرعة المحرك (RPM)
-      '0105',     // حرارة ماء المحرك (Coolant Temp)
-      '0146',     // الحرارة الخارجية (Ambient Temp)
-      '2211A4',   // ضغط الفريون بالحساس العالي (A/C High Pressure)
-      '2211A5',   // حرارة مبخر التكييف/الافريز (Evaporator Temp)
-      '2211A6'    // حالة تعشيق كلاتش الكومبريسور (A/C Relay State)
+    // مجموعة PIDs مخصصة لفحص وتحليل غرف الاحتراق والتقطيع
+    const combustionPids = [
+      '010C',     // RPM
+      '221121',   // Misfire Cyl 1
+      '221122',   // Misfire Cyl 2
+      '221123',   // Misfire Cyl 3
+      '221124',   // Misfire Cyl 4
+      '2211A1',   // Ignition Efficiency / Knock Sensor Cyl 1
+      '2211A2',   // Ignition Efficiency / Knock Sensor Cyl 2
+      '2211A3',   // Ignition Efficiency / Knock Sensor Cyl 3
+      '2211A4'    // Ignition Efficiency / Knock Sensor Cyl 4
     ];
+
+    const acPids = ['010C', '0105', '0146', '2211A4', '2211A5', '2211A6'];
 
     function writeConsole(msg) {
       const consoleLog = document.getElementById('consoleLog');
@@ -308,6 +325,7 @@
           writeConsole("RX: " + cleanResp);
           if (currentMode === 'VIN') parseVINAndECUData(cleanResp);
           if (currentMode === 'ENGINE') parseEngineData(cleanResp);
+          if (currentMode === 'COMBUSTION') parseCombustionData(cleanResp);
           if (currentMode === 'AC') parseACData(cleanResp);
         }
       }
@@ -362,20 +380,62 @@
         if (parts.length >= 1) {
           let timing = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
           updateVal('timing1Val', timing + "°");
-          updateVal('timing2Val', timing + "°");
-          updateVal('timing3Val', timing + "°");
-          updateVal('timing4Val', timing + "°");
         }
       }
-      if (resp.includes("62 11 21")) updateMisfire('mis1Val', resp);
-      if (resp.includes("62 11 22")) updateMisfire('mis2Val', resp);
-      if (resp.includes("62 11 23")) updateMisfire('mis3Val', resp);
-      if (resp.includes("62 11 24")) updateMisfire('mis4Val', resp);
     }
 
-    // 2. المحرك المطور لقراءة وتحليل بيانات التكييف الفعلية
+    // تحليل بيانات غرف الاحتراق المطور
+    function parseCombustionData(resp) {
+      if (resp.includes("41 0C")) {
+        let parts = resp.split("41 0C").pop().trim().split(" ");
+        if (parts.length >= 2) {
+          let rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
+          updateVal('combRpmVal', rpm + " RPM");
+        }
+      }
+
+      // تحليل تقطيع واهتزاز كل سلندر
+      const cylPids = [
+        { pid: '62 11 21', id: 1 },
+        { pid: '62 11 22', id: 2 },
+        { pid: '62 11 23', id: 3 },
+        { pid: '62 11 24', id: 4 }
+      ];
+
+      cylPids.forEach(c => {
+        if (resp.includes(c.pid)) {
+          let parts = resp.trim().split(" ");
+          let count = parseInt(parts[parts.length - 1], 16) || 0;
+          
+          let card = document.getElementById(`cylCard${c.id}`);
+          let statusElem = document.getElementById(`cylStatus${c.id}`);
+          let misElem = document.getElementById(`cylMis${c.id}`);
+          let effElem = document.getElementById(`cylEff${c.id}`);
+
+          if (count > 0) {
+            // رصد خلل قاطع في غرفة الاحتراق (فصل فيشة أو عطل بوجي)
+            card.classList.add('faulty');
+            statusElem.innerText = "خلل في الحرق!";
+            misElem.innerText = count + " Misfire";
+            effElem.innerText = Math.max(10, 100 - (count * 15)) + "%";
+            
+            // إظهار التنبيه التلقائي مع تحديد الغرفة
+            let alertBox = document.getElementById('combustionAlert');
+            if (alertBox) {
+              alertBox.style.display = 'block';
+              alertBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> تحذير: انقطاع حرق قسري في (غرفة ${c.id})! افحص الفيشة، الكويل، أو البوجي.`;
+            }
+          } else {
+            card.classList.remove('faulty');
+            statusElem.innerText = "احتراق ممتاز";
+            misElem.innerText = "0 Misfire";
+            effElem.innerText = "100%";
+          }
+        }
+      });
+    }
+
     function parseACData(resp) {
-      // سرعة المحرك RPM
       if (resp.includes("41 0C")) {
         let parts = resp.split("41 0C").pop().trim().split(" ");
         if (parts.length >= 2) {
@@ -384,7 +444,6 @@
         }
       }
 
-      // حرارة ماء المحرك
       if (resp.includes("41 05")) {
         let parts = resp.split("41 05").pop().trim().split(" ");
         if (parts.length >= 1) {
@@ -393,7 +452,6 @@
         }
       }
 
-      // الحرارة الخارجية Ambient
       if (resp.includes("41 46")) {
         let parts = resp.split("41 46").pop().trim().split(" ");
         if (parts.length >= 1) {
@@ -402,44 +460,33 @@
         }
       }
 
-      // ضغط الفريون - حساس الضغط العالي (High Pressure Sensor)
       if (resp.includes("62 11 A4") || resp.includes("41 70")) {
         let parts = resp.trim().split(" ");
         let raw = parseInt(parts[parts.length - 1], 16) || 0;
-        
-        // حساب الضغط (معادلة القياس: Raw * 3.5 = PSI تقريبياً)
-        let psi = Math.round(raw * 3.5);
-        if (psi === 0) psi = 145; // قيمة افتراضية نموذجية للضغط المستقر عند التوقف
-
+        let psi = Math.round(raw * 3.5) || 145;
         let bar = (psi / 14.5038).toFixed(1);
         
         updateVal('acPressPsi', psi + " PSI");
         updateVal('acPressBar', bar + " Bar");
 
-        // تحديث المؤشر البياني
         let fill = document.getElementById('acGaugeFill');
         if (fill) {
           let percentage = Math.min((psi / 350) * 100, 100);
           fill.style.width = percentage + "%";
-          
-          if (psi > 280) fill.style.backgroundColor = "#ef4444"; // ضغط مرتفع جداً
-          else if (psi < 50) fill.style.backgroundColor = "#f59e0b"; // فريون ناقص
-          else fill.style.backgroundColor = "#0284c7"; // طبيعي
+          if (psi > 280) fill.style.backgroundColor = "#ef4444";
+          else if (psi < 50) fill.style.backgroundColor = "#f59e0b";
+          else fill.style.backgroundColor = "#0284c7";
         }
       }
 
-      // درجة حرارة الافريز/الثلاجة (Evaporator Temp)
       if (resp.includes("62 11 A5")) {
         let parts = resp.trim().split(" ");
         let raw = parseInt(parts[parts.length - 1], 16) || 0;
         let evapTemp = raw - 40;
-        
-        // حماية الافريز من التجمد
         let statusText = evapTemp <= 1 ? " (خطر الانجماد)" : " (طبيعي)";
         updateVal('evapTempVal', evapTemp + " °C" + statusText);
       }
 
-      // حالة تعشيق كلاتش الكومبريسور
       if (resp.includes("62 11 A6")) {
         let parts = resp.trim().split(" ");
         let status = parseInt(parts[parts.length - 1], 16);
@@ -456,43 +503,26 @@
       }
     }
 
-    function updateMisfire(id, resp) {
-      let parts = resp.trim().split(" ");
-      let count = parseInt(parts[parts.length - 1], 16) || 0;
-      let el = document.getElementById(id);
-      if (el) {
-        el.innerText = count > 0 ? count + " (تقطيع!)" : "0 (سليم)";
-        el.style.color = count > 0 ? "#dc2626" : "#16a34a";
-      }
-    }
-
     function updateVal(id, val) {
       const el = document.getElementById(id);
       if (el) el.innerText = val;
     }
 
-    // 3. محرك تنفيذ التحكم القسري الشامل (UDS Actuation Protocol)
     async function startActuationSession(header) {
       stopPolling();
       writeConsole(`تعيين Header العقل: ${header}`);
       await sendCmd(`AT SH ${header}`);
-      
-      writeConsole("دخول Extended Diagnostic Session (10 03)...");
       await sendCmd("10 03");
 
       if (keepAliveInterval) clearInterval(keepAliveInterval);
-      keepAliveInterval = setInterval(() => {
-        sendCmd("3E 80");
-      }, 2000);
+      keepAliveInterval = setInterval(() => { sendCmd("3E 80"); }, 2000);
     }
 
     async function executeCommand(cmd, header) {
       if (!isConnected) { alert("يرجى الاتصال بالسيارة أولاً!"); return; }
       let h = header || activeProfile.headerECM;
       await startActuationSession(h);
-      setTimeout(async () => {
-        await sendCmd(cmd);
-      }, 300);
+      setTimeout(async () => { await sendCmd(cmd); }, 300);
     }
 
     async function stopActuation(cmdReset) {
@@ -513,38 +543,73 @@
         currentMode = "ENGINE";
         body.innerHTML = `
           <div class="sensor-card" style="margin-bottom:10px;"><small>سرعة المحرك</small><div id="rpmVal" class="val">0 RPM</div></div>
-
-          <div class="custom-box" style="background:#f0f9ff; border-color:#bae6fd;">
-            <div class="box-title" style="color:#0369a1;"><i class="fa-solid fa-bolt"></i> توقيت الاشتعال المخطط (Timing Advance)</div>
-            <div class="live-data-grid">
-              <div class="sensor-card"><small>سلندر 1</small><div id="timing1Val" class="val">--°</div></div>
-              <div class="sensor-card"><small>سلندر 2</small><div id="timing2Val" class="val">--°</div></div>
-              <div class="sensor-card"><small>سلندر 3</small><div id="timing3Val" class="val">--°</div></div>
-              <div class="sensor-card"><small>سلندر 4</small><div id="timing4Val" class="val">--°</div></div>
-            </div>
-          </div>
-
-          <div class="custom-box">
-            <div class="box-title"><i class="fa-solid fa-triangle-exclamation"></i> كاشف تقطيع المحرك (Cylinder Misfire Counters)</div>
-            <div class="live-data-grid">
-              <div class="sensor-card"><small>تقطيع سلندر 1</small><div id="mis1Val" class="val" style="color:#16a34a;">0 (سليم)</div></div>
-              <div class="sensor-card"><small>تقطيع سلندر 2</small><div id="mis2Val" class="val" style="color:#16a34a;">0 (سليم)</div></div>
-              <div class="sensor-card"><small>تقطيع سلندر 3</small><div id="mis3Val" class="val" style="color:#16a34a;">0 (سليم)</div></div>
-              <div class="sensor-card"><small>تقطيع سلندر 4</small><div id="mis4Val" class="val" style="color:#16a34a;">0 (سليم)</div></div>
-            </div>
-          </div>
-
+          <div class="sensor-card"><small>توقيت الاشتعال (Timing Advance)</small><div id="timing1Val" class="val">--°</div></div>
           <div style="display:flex; gap:10px; margin-top:15px;">
             <button class="action-btn btn-on" onclick="startPolling(enginePids)">بدء القراءة الحية</button>
             <button class="action-btn btn-off" onclick="stopPolling()">إيقاف القراءة</button>
           </div>
         `;
-      } else if (moduleName.includes('A/C Diagnostics')) {
+      } 
+      // صفحة غرف الاحتراق المخصصة (Combustion Diagnostics)
+      else if (moduleName.includes('Combustion Monitor')) {
+        currentMode = "COMBUSTION";
+        body.innerHTML = `
+          <div id="combustionAlert" class="alert-banner"></div>
+
+          <div class="sensor-card" style="margin-bottom:12px;">
+            <small>دوران المحرك الحقيقي (Engine Speed)</small>
+            <div id="combRpmVal" class="val">0 RPM</div>
+          </div>
+
+          <div class="box-title" style="color:#c2410c; font-size:1rem; margin-top:10px;">
+            <i class="fa-solid fa-fire"></i> حالة واختبار كفاءة غرف الاحتراق (Cylinder Combustion Diagnostic)
+          </div>
+
+          <div class="cylinder-grid">
+            <!-- غرفة 1 -->
+            <div id="cylCard1" class="cylinder-card">
+              <div class="cylinder-title"><i class="fa-solid fa-piston"></i> غرفة 1 (Cyl 1)</div>
+              <div id="cylStatus1" class="cylinder-status">جاري الفحص...</div>
+              <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">كفاءة الحرق: <strong id="cylEff1" style="color:#0284c7;">--%</strong></div>
+              <div style="font-size:0.8rem; color:#64748b;">التقطيع التراكمي: <strong id="cylMis1" style="color:#ef4444;">0 Misfire</strong></div>
+            </div>
+
+            <!-- غرفة 2 -->
+            <div id="cylCard2" class="cylinder-card">
+              <div class="cylinder-title"><i class="fa-solid fa-piston"></i> غرفة 2 (Cyl 2)</div>
+              <div id="cylStatus2" class="cylinder-status">جاري الفحص...</div>
+              <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">كفاءة الحرق: <strong id="cylEff2" style="color:#0284c7;">--%</strong></div>
+              <div style="font-size:0.8rem; color:#64748b;">التقطيع التراكمي: <strong id="cylMis2" style="color:#ef4444;">0 Misfire</strong></div>
+            </div>
+
+            <!-- غرفة 3 -->
+            <div id="cylCard3" class="cylinder-card">
+              <div class="cylinder-title"><i class="fa-solid fa-piston"></i> غرفة 3 (Cyl 3)</div>
+              <div id="cylStatus3" class="cylinder-status">جاري الفحص...</div>
+              <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">كفاءة الحرق: <strong id="cylEff3" style="color:#0284c7;">--%</strong></div>
+              <div style="font-size:0.8rem; color:#64748b;">التقطيع التراكمي: <strong id="cylMis3" style="color:#ef4444;">0 Misfire</strong></div>
+            </div>
+
+            <!-- غرفة 4 -->
+            <div id="cylCard4" class="cylinder-card">
+              <div class="cylinder-title"><i class="fa-solid fa-piston"></i> غرفة 4 (Cyl 4)</div>
+              <div id="cylStatus4" class="cylinder-status">جاري الفحص...</div>
+              <div style="font-size:0.8rem; color:#64748b; margin-top:4px;">كفاءة الحرق: <strong id="cylEff4" style="color:#0284c7;">--%</strong></div>
+              <div style="font-size:0.8rem; color:#64748b;">التقطيع التراكمي: <strong id="cylMis4" style="color:#ef4444;">0 Misfire</strong></div>
+            </div>
+          </div>
+
+          <div style="display:flex; gap:10px; margin-top:15px;">
+            <button class="action-btn btn-on" onclick="startPolling(combustionPids)">بدء فحص الحرق المباشر</button>
+            <button class="action-btn btn-off" onclick="stopPolling()">إيقاف الفحص</button>
+          </div>
+        `;
+      } 
+      else if (moduleName.includes('A/C Diagnostics')) {
         currentMode = "AC";
         body.innerHTML = `
-          <!-- لوحة الضغط العالي مع الشريط البياني -->
           <div class="custom-box" style="background:#f0f9ff; border-color:#bae6fd;">
-            <div class="box-title" style="color:#0369a1;"><i class="fa-solid fa-gauge-high"></i> ضغط الفريون - حساس الضغط العالي (A/C Pressure Sensor)</div>
+            <div class="box-title" style="color:#0369a1;"><i class="fa-solid fa-gauge-high"></i> ضغط الفريون - حساس الضغط العالي</div>
             <div class="live-data-grid">
               <div class="sensor-card"><small>الضغط بوحدة PSI</small><div id="acPressPsi" class="val">-- PSI</div></div>
               <div class="sensor-card"><small>الضغط بوحدة Bar</small><div id="acPressBar" class="val">-- Bar</div></div>
@@ -554,7 +619,6 @@
             </div>
           </div>
 
-          <!-- درجات الحرارة وحالة الكومبريسور -->
           <div class="custom-box" style="background:#f8fafc; border-color:#cbd5e1;">
             <div class="box-title" style="color:#334155;"><i class="fa-solid fa-temperature-three-quarters"></i> درجات الحرارة وحالة المنظومة</div>
             <div class="live-data-grid">
@@ -566,9 +630,8 @@
             </div>
           </div>
 
-          <!-- التحكم القسري المباشر بالتكييف -->
           <div class="actuator-card" style="margin-top:12px;">
-            <h4><i class="fa-solid fa-bolt" style="color:#0284c7;"></i> اختبـار تعشيق الكومبريسور القسري (Actuation Test)</h4>
+            <h4><i class="fa-solid fa-bolt" style="color:#0284c7;"></i> اختبـار تعشيق الكومبريسور القسري</h4>
             <div style="display:flex; gap:10px;">
               <button class="action-btn btn-on" onclick="executeCommand(activeProfile.acClutchOn, activeProfile.headerAC)">تشغيل كلاتش التكييف</button>
               <button class="action-btn btn-off" onclick="stopActuation(activeProfile.acClutchOff)">إيقاف الكومبريسور</button>
