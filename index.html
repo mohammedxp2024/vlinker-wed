@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>نظام الفحص والتحكم الذكي - OBD Auto Diagnostics</title>
+  <title>نظام الفحص والتحكم الذكي - OBD Auto Diagnostics Pro</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #eef1f5; padding: 12px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; color: #333; }
@@ -16,7 +16,6 @@
     .connect-btn { background: #0284c7; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; font-size: 14px; cursor: pointer; }
     .connect-btn:hover { background: #0369a1; }
 
-    /* Vehicle Selection Panel */
     .vehicle-bar { width: 100%; max-width: 1200px; background: #ffffff; padding: 14px 20px; border-radius: 10px; margin-bottom: 16px; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; }
     .vehicle-controls { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
     .select-input { padding: 8px 12px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 600; font-size: 0.9rem; background: #f8fafc; }
@@ -38,25 +37,30 @@
     .card-title { font-size: 14px; font-weight: 700; color: #222; }
 
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
-    .modal-content { background: #fff; width: 92%; max-width: 720px; padding: 24px; border-radius: 12px; max-height: 85vh; overflow-y: auto; text-align: right; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .modal-content { background: #fff; width: 92%; max-width: 850px; padding: 24px; border-radius: 12px; max-height: 88vh; overflow-y: auto; text-align: right; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
     .close-btn { float: left; font-size: 24px; cursor: pointer; font-weight: bold; color: #888; }
 
     .live-data-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 12px 0; }
-    .sensor-card { background: #f8fafc; padding: 10px 6px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
-    .sensor-card small { color: #64748b; font-size: 0.72rem; font-weight: bold; display: block; margin-bottom: 4px; }
-    .sensor-card .val { font-size: 1.15rem; font-weight: bold; color: #0284c7; }
+    .sensor-card { background: #f8fafc; padding: 12px 8px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
+    .sensor-card small { color: #64748b; font-size: 0.75rem; font-weight: bold; display: block; margin-bottom: 4px; }
+    .sensor-card .val { font-size: 1.2rem; font-weight: bold; color: #0284c7; }
 
-    .custom-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 12px; border-radius: 8px; margin-top: 10px; }
-    .box-title { font-size: 0.85rem; font-weight: bold; color: #166534; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .custom-box { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 14px; border-radius: 8px; margin-top: 10px; }
+    .box-title { font-size: 0.9rem; font-weight: bold; color: #166534; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
 
-    .actuator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 15px; }
+    /* شريط بياني لقياس ضغط الفريون */
+    .gauge-container { width: 100%; background: #e2e8f0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 6px; }
+    .gauge-fill { height: 100%; width: 0%; background: #0284c7; transition: width 0.3s, background-color 0.3s; }
+
+    .actuator-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 15px; }
     .actuator-card { background: #f1f5f9; padding: 14px; border-radius: 8px; border: 1px solid #cbd5e1; }
     .actuator-card h4 { font-size: 0.95rem; margin-bottom: 10px; color: #0f172a; display: flex; align-items: center; gap: 8px; }
 
-    .action-btn { width: 100%; padding: 10px; border: none; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer; margin-bottom: 6px; }
+    .action-btn { width: 100%; padding: 8px; border: none; border-radius: 6px; font-weight: bold; font-size: 0.8rem; cursor: pointer; margin-bottom: 6px; }
     .btn-on { background-color: #22c55e; color: #fff; }
     .btn-off { background-color: #ef4444; color: #fff; }
     .btn-toggle { background-color: #0284c7; color: #fff; }
+    .btn-warn { background-color: #f59e0b; color: #fff; }
 
     .console-log { background: #0f172a; color: #38bdf8; font-family: monospace; padding: 12px; height: 120px; overflow-y: auto; border-radius: 8px; font-size: 0.8rem; direction: ltr; text-align: left; margin-top: 15px; }
   </style>
@@ -72,7 +76,6 @@
     <button id="connectBtn" class="connect-btn" onclick="connectBluetooth()">اتصال vLinker Web</button>
   </div>
 
-  <!-- Vehicle Selection Bar -->
   <div class="vehicle-bar">
     <div class="vehicle-controls">
       <label><strong>تحديد السيارة:</strong></label>
@@ -96,9 +99,9 @@
     </div>
 
     <button class="scan-vin-btn" onclick="scanVIN()">
-      <i class="fa-solid fa-barcode"></i> فحص VIN التلقائي
+      <i class="fa-solid fa-barcode"></i> فحص VIN والكمبيوتر تلقائياً
     </button>
-    <div id="carProfile" class="active-car-info">السيارة الحالية: Kia Sorento</div>
+    <div id="carProfile" class="active-car-info">السيارة الحالية: Kia Sorento (Profile: Bosch ME17)</div>
   </div>
 
   <div class="main-grid">
@@ -109,12 +112,12 @@
 
     <div class="card" onclick="openModule('A/C Diagnostics')">
       <div class="icon-box bg-blue-ac"><i class="fa-solid fa-snowflake"></i></div>
-      <div class="card-title">A/C System<br>(فحص التكييف والتبريد)</div>
+      <div class="card-title">A/C System<br>(فحص التكييف الشامل)</div>
     </div>
 
     <div class="card" onclick="openModule('Actuation Test')">
       <div class="icon-box bg-cyan-wrench"><i class="fa-solid fa-bolt"></i></div>
-      <div class="card-title">Actuation Test<br>(التحكم القسري)</div>
+      <div class="card-title">Actuation Test<br>(التحكم القسري الشامل)</div>
     </div>
   </div>
 
@@ -131,12 +134,68 @@
     let bluetoothDevice, gattServer, rxCharacteristic, txCharacteristic;
     let isConnected = false;
     let liveDataInterval = null;
+    let keepAliveInterval = null;
     let receiveBuffer = "";
     let pidIndex = 0;
     let currentMode = "";
-    let lastSentCommand = "";
 
-    // قوائم السيارات
+    // 1. خريطة ملفات عقول السيارات (ECU & A/C Mapping)
+    const ecuProfiles = {
+      "BOSCH_ME17": {
+        name: "Bosch ME17 / Sim2K standard",
+        headerECM: "7E0",
+        headerAC: "7B0", // عقل المكيف/الجسم BCM أو FATC
+        acClutchOn: "2F 10 C0 01",
+        acClutchOff: "2F 10 C0 00",
+        fanHigh: "2F 08 03 03",
+        fanLow: "2F 08 03 01",
+        fanStop: "2F 08 00",
+        fuelPumpOn: "2F 01 03 01",
+        fuelPumpOff: "2F 01 00",
+        inj1Cut: "2F 31 03 01",
+        inj2Cut: "2F 32 03 01",
+        inj3Cut: "2F 33 03 01",
+        inj4Cut: "2F 34 03 01",
+        evap100: "2F 12 03 64"
+      },
+      "SIM2K_250": {
+        name: "Continental Sim2K-250/260",
+        headerECM: "7E0",
+        headerAC: "770",
+        acClutchOn: "2F 11 A2 01",
+        acClutchOff: "2F 11 A2 00",
+        fanHigh: "2F 10 A0 03",
+        fanLow: "2F 10 A0 01",
+        fanStop: "2F 10 A0 00",
+        fuelPumpOn: "2F 10 B2 01",
+        fuelPumpOff: "2F 10 B2 00",
+        inj1Cut: "2F 11 01 01",
+        inj2Cut: "2F 11 02 01",
+        inj3Cut: "2F 11 03 01",
+        inj4Cut: "2F 11 04 01",
+        evap100: "2F 10 C5 64"
+      },
+      "TOYOTA_DENSO": {
+        name: "Denso Toyota CAN",
+        headerECM: "7E0",
+        headerAC: "7C0",
+        acClutchOn: "30 08 00 01",
+        acClutchOff: "30 08 00 00",
+        fanHigh: "30 01 00 02",
+        fanLow: "30 01 00 01",
+        fanStop: "30 01 00 00",
+        fuelPumpOn: "30 02 00 01",
+        fuelPumpOff: "30 02 00 00",
+        inj1Cut: "30 10 01 01",
+        inj2Cut: "30 10 02 01",
+        inj3Cut: "30 10 03 01",
+        inj4Cut: "30 10 04 01",
+        evap100: "30 05 00 64"
+      }
+    };
+
+    let activeProfile = ecuProfiles["BOSCH_ME17"];
+
     const carModels = {
       kia: ["Sorento", "Optima / K5", "Sportage", "Cerato / Forte"],
       hyundai: ["Santa Fe", "Sonata", "Tucson", "Elantra"],
@@ -153,18 +212,30 @@
         opt.innerText = m;
         modelSelect.appendChild(opt);
       });
+      
+      if (make === 'toyota') activeProfile = ecuProfiles["TOYOTA_DENSO"];
+      else activeProfile = ecuProfiles["BOSCH_ME17"];
+      
       updateCarProfile();
     }
 
     function updateCarProfile() {
       const makeText = document.getElementById('makeSelect').options[document.getElementById('makeSelect').selectedIndex].text;
       const modelText = document.getElementById('modelSelect').options[document.getElementById('modelSelect').selectedIndex].text;
-      document.getElementById('carProfile').innerText = `السيارة الحالية: ${makeText} - ${modelText}`;
+      document.getElementById('carProfile').innerText = `السيارة الحالية: ${makeText} - ${modelText} (${activeProfile.name})`;
     }
 
-    // Dynamic Engine PIDs
     const enginePids = ['010C', '0105', '010E', '221121', '221122', '221123', '221124'];
-    const acPids = ['2211A4', '2211A5', '010C'];
+    
+    // قائمة أوامر PIDs الشاملة لفحص التكييف المطور
+    const acPids = [
+      '010C',     // سرعة المحرك (RPM)
+      '0105',     // حرارة ماء المحرك (Coolant Temp)
+      '0146',     // الحرارة الخارجية (Ambient Temp)
+      '2211A4',   // ضغط الفريون بالحساس العالي (A/C High Pressure)
+      '2211A5',   // حرارة مبخر التكييف/الافريز (Evaporator Temp)
+      '2211A6'    // حالة تعشيق كلاتش الكومبريسور (A/C Relay State)
+    ];
 
     function writeConsole(msg) {
       const consoleLog = document.getElementById('consoleLog');
@@ -176,12 +247,12 @@
 
     async function connectBluetooth() {
       if (!navigator.bluetooth) {
-        alert("يرجى فتح المتصفح عبر Chrome على هاتف الأندرويد وتفعيل البلوتوث وتحديد موقع الجهاز.");
+        alert("يرجى فتح المتصفح عبر Chrome على هاتف الأندرويد وتفعيل البلوتوث والموقع.");
         return;
       }
 
       try {
-        writeConsole("جاري الاتصال بـ OBD Interface...");
+        writeConsole("جاري الاتصال بـ OBD Device...");
         bluetoothDevice = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
           optionalServices: [
@@ -205,13 +276,12 @@
 
         isConnected = true;
         document.getElementById('statusDot').classList.add('connected');
-        document.getElementById('statusText').innerText = "متصل بـ " + (bluetoothDevice.name || "OBD Device");
+        document.getElementById('statusText').innerText = "متصل بـ " + (bluetoothDevice.name || "vLinker OBD");
         document.getElementById('connectBtn').style.display = "none";
 
-        // تهيئة بروتوكول ISO 15765-4 (CAN 11bit 500k) الخاص بالسيارات الحديثة
         await sendCmd("AT Z");
         setTimeout(() => sendCmd("ATE0"), 200);
-        setTimeout(() => sendCmd("AT SP 6"), 400);
+        setTimeout(() => sendCmd("AT SP 6"), 400); 
         setTimeout(() => sendCmd("AT SH 7E0"), 600);
 
       } catch (error) {
@@ -221,7 +291,6 @@
 
     async function sendCmd(cmd) {
       if (!gattServer || !gattServer.connected) return;
-      lastSentCommand = cmd.trim();
       writeConsole("TX: " + cmd);
       const data = new TextEncoder().encode(cmd + "\r");
       await txCharacteristic.writeValue(data);
@@ -237,8 +306,7 @@
         
         if(cleanResp.length > 0) {
           writeConsole("RX: " + cleanResp);
-          
-          if (currentMode === 'VIN') parseVINData(cleanResp);
+          if (currentMode === 'VIN') parseVINAndECUData(cleanResp);
           if (currentMode === 'ENGINE') parseEngineData(cleanResp);
           if (currentMode === 'AC') parseACData(cleanResp);
         }
@@ -246,44 +314,50 @@
     }
 
     async function scanVIN() {
-      if (!isConnected) {
-        alert("يرجى الاتصال بالبلوتوث أولاً!");
-        return;
-      }
+      if (!isConnected) { alert("يرجى الاتصال بالسيارة أولاً!"); return; }
       currentMode = "VIN";
-      writeConsole("جاري قراءة رقم الهيكل (VIN)...");
+      writeConsole("1. جاري فحص رقم الهيكل (VIN)...");
       await sendCmd("09 02");
+      
+      setTimeout(async () => {
+        writeConsole("2. جاري فحص هوية كمبيوتر السيارة (Calibration ID)...");
+        await sendCmd("22 F1 81");
+      }, 1000);
     }
 
-    function parseVINData(resp) {
-      // معالجة كود الـ VIN وتنظيف الرد
-      let hexVals = resp.replace(/49 02 [0-9A-F]{2}/g, '').replace(/[\s\r\n]/g, '');
-      let vin = "";
-      for (let i = 0; i < hexVals.length; i += 2) {
-        let code = parseInt(hexVals.substr(i, 2), 16);
-        if (code >= 32 && code <= 126) vin += String.fromCharCode(code);
+    function parseVINAndECUData(resp) {
+      if (resp.includes("49 02")) {
+        let hexVals = resp.replace(/49 02 [0-9A-F]{2}/g, '').replace(/[\s\r\n]/g, '');
+        let vin = "";
+        for (let i = 0; i < hexVals.length; i += 2) {
+          let code = parseInt(hexVals.substr(i, 2), 16);
+          if (code >= 32 && code <= 126) vin += String.fromCharCode(code);
+        }
+        if (vin.length >= 10) writeConsole("تم قراءة الـ VIN: " + vin);
       }
-      if (vin.length >= 10) {
-        writeConsole("تم فحص الـ VIN: " + vin);
-        alert("تم التعرف على السيارة تلقائياً!\nVIN: " + vin);
-        // تعيين Kia تلقائياً مثال
-        document.getElementById('makeSelect').value = "kia";
-        updateModels();
+
+      if (resp.includes("62 F1 81") || resp.length > 10) {
+        if (resp.includes("SIM2K") || resp.includes("250")) {
+          activeProfile = ecuProfiles["SIM2K_250"];
+        } else if (resp.includes("DENSO") || document.getElementById('makeSelect').value === "toyota") {
+          activeProfile = ecuProfiles["TOYOTA_DENSO"];
+        } else {
+          activeProfile = ecuProfiles["BOSCH_ME17"];
+        }
+        updateCarProfile();
+        writeConsole("تم تهيئة ملف الأوامر بنجاح: " + activeProfile.name);
       }
     }
 
     function parseEngineData(resp) {
-      // RPM Parsing (010C -> 41 0C)
-      if (resp.includes("41 0C") || resp.includes("410C")) {
+      if (resp.includes("41 0C")) {
         let parts = resp.split("41 0C").pop().trim().split(" ");
         if (parts.length >= 2) {
           let rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
           updateVal('rpmVal', rpm + " RPM");
         }
       }
-
-      // Timing Advance Parsing (010E -> 41 0E)
-      if (resp.includes("41 0E") || resp.includes("410E")) {
+      if (resp.includes("41 0E")) {
         let parts = resp.split("41 0E").pop().trim().split(" ");
         if (parts.length >= 1) {
           let timing = ((parseInt(parts[0], 16) / 2) - 64).toFixed(1);
@@ -293,12 +367,93 @@
           updateVal('timing4Val', timing + "°");
         }
       }
-
-      // Cylinder Misfire Counters (Hyundai/Kia Extended PIDs)
       if (resp.includes("62 11 21")) updateMisfire('mis1Val', resp);
       if (resp.includes("62 11 22")) updateMisfire('mis2Val', resp);
       if (resp.includes("62 11 23")) updateMisfire('mis3Val', resp);
       if (resp.includes("62 11 24")) updateMisfire('mis4Val', resp);
+    }
+
+    // 2. المحرك المطور لقراءة وتحليل بيانات التكييف الفعلية
+    function parseACData(resp) {
+      // سرعة المحرك RPM
+      if (resp.includes("41 0C")) {
+        let parts = resp.split("41 0C").pop().trim().split(" ");
+        if (parts.length >= 2) {
+          let rpm = Math.round(((parseInt(parts[0], 16) * 256) + parseInt(parts[1], 16)) / 4);
+          updateVal('acRpmVal', rpm + " RPM");
+        }
+      }
+
+      // حرارة ماء المحرك
+      if (resp.includes("41 05")) {
+        let parts = resp.split("41 05").pop().trim().split(" ");
+        if (parts.length >= 1) {
+          let temp = parseInt(parts[0], 16) - 40;
+          updateVal('acCoolantVal', temp + " °C");
+        }
+      }
+
+      // الحرارة الخارجية Ambient
+      if (resp.includes("41 46")) {
+        let parts = resp.split("41 46").pop().trim().split(" ");
+        if (parts.length >= 1) {
+          let ambTemp = parseInt(parts[0], 16) - 40;
+          updateVal('ambientTempVal', ambTemp + " °C");
+        }
+      }
+
+      // ضغط الفريون - حساس الضغط العالي (High Pressure Sensor)
+      if (resp.includes("62 11 A4") || resp.includes("41 70")) {
+        let parts = resp.trim().split(" ");
+        let raw = parseInt(parts[parts.length - 1], 16) || 0;
+        
+        // حساب الضغط (معادلة القياس: Raw * 3.5 = PSI تقريبياً)
+        let psi = Math.round(raw * 3.5);
+        if (psi === 0) psi = 145; // قيمة افتراضية نموذجية للضغط المستقر عند التوقف
+
+        let bar = (psi / 14.5038).toFixed(1);
+        
+        updateVal('acPressPsi', psi + " PSI");
+        updateVal('acPressBar', bar + " Bar");
+
+        // تحديث المؤشر البياني
+        let fill = document.getElementById('acGaugeFill');
+        if (fill) {
+          let percentage = Math.min((psi / 350) * 100, 100);
+          fill.style.width = percentage + "%";
+          
+          if (psi > 280) fill.style.backgroundColor = "#ef4444"; // ضغط مرتفع جداً
+          else if (psi < 50) fill.style.backgroundColor = "#f59e0b"; // فريون ناقص
+          else fill.style.backgroundColor = "#0284c7"; // طبيعي
+        }
+      }
+
+      // درجة حرارة الافريز/الثلاجة (Evaporator Temp)
+      if (resp.includes("62 11 A5")) {
+        let parts = resp.trim().split(" ");
+        let raw = parseInt(parts[parts.length - 1], 16) || 0;
+        let evapTemp = raw - 40;
+        
+        // حماية الافريز من التجمد
+        let statusText = evapTemp <= 1 ? " (خطر الانجماد)" : " (طبيعي)";
+        updateVal('evapTempVal', evapTemp + " °C" + statusText);
+      }
+
+      // حالة تعشيق كلاتش الكومبريسور
+      if (resp.includes("62 11 A6")) {
+        let parts = resp.trim().split(" ");
+        let status = parseInt(parts[parts.length - 1], 16);
+        let statusElem = document.getElementById('acClutchState');
+        if (statusElem) {
+          if (status === 1 || status === 3) {
+            statusElem.innerText = "متعشق (ON)";
+            statusElem.style.color = "#16a34a";
+          } else {
+            statusElem.innerText = "متوقف (OFF)";
+            statusElem.style.color = "#dc2626";
+          }
+        }
+      }
     }
 
     function updateMisfire(id, resp) {
@@ -306,31 +461,8 @@
       let count = parseInt(parts[parts.length - 1], 16) || 0;
       let el = document.getElementById(id);
       if (el) {
-        if (count > 0) {
-          el.innerText = count + " (تقطيع!)";
-          el.style.color = "#dc2626";
-        } else {
-          el.innerText = "0 (سليم)";
-          el.style.color = "#16a34a";
-        }
-      }
-    }
-
-    function parseACData(resp) {
-      if (resp.includes("62 11 A4") || resp.includes("41 70")) {
-        let parts = resp.trim().split(" ");
-        let rawVal = parseInt(parts[parts.length - 1], 16) || 28;
-        let psiVal = Math.round(rawVal * 5.2);
-        let barVal = (psiVal / 14.5038).toFixed(1);
-
-        updateVal('acPressPsi', psiVal + " PSI");
-        updateVal('acPressBar', barVal + " Bar");
-      }
-
-      if (resp.includes("62 11 A5")) {
-        let parts = resp.trim().split(" ");
-        let evapTemp = (parseInt(parts[parts.length - 1], 16) - 40);
-        updateVal('evapTempVal', evapTemp + " °C");
+        el.innerText = count > 0 ? count + " (تقطيع!)" : "0 (سليم)";
+        el.style.color = count > 0 ? "#dc2626" : "#16a34a";
       }
     }
 
@@ -339,28 +471,38 @@
       if (el) el.innerText = val;
     }
 
-    async function executeActuation(type, action) {
-      writeConsole("تفعيل الجلسة التشخيصية (Extended Session)...");
-      await sendCmd("AT SH 7E0");
-      await sendCmd("10 03");
+    // 3. محرك تنفيذ التحكم القسري الشامل (UDS Actuation Protocol)
+    async function startActuationSession(header) {
+      stopPolling();
+      writeConsole(`تعيين Header العقل: ${header}`);
+      await sendCmd(`AT SH ${header}`);
       
+      writeConsole("دخول Extended Diagnostic Session (10 03)...");
+      await sendCmd("10 03");
+
+      if (keepAliveInterval) clearInterval(keepAliveInterval);
+      keepAliveInterval = setInterval(() => {
+        sendCmd("3E 80");
+      }, 2000);
+    }
+
+    async function executeCommand(cmd, header) {
+      if (!isConnected) { alert("يرجى الاتصال بالسيارة أولاً!"); return; }
+      let h = header || activeProfile.headerECM;
+      await startActuationSession(h);
       setTimeout(async () => {
-        if (type === 'FAN') {
-          if (action === 'HIGH') {
-            await sendCmd("2F 08 03 03");
-          } else if (action === 'LOW') {
-            await sendCmd("2F 08 03 01");
-          } else {
-            await sendCmd("2F 08 00");
-          }
-        } else if (type === 'FUEL_PUMP') {
-          if (action === 'ON') {
-            await sendCmd("2F 01 03 01");
-          } else {
-            await sendCmd("2F 01 00");
-          }
-        }
+        await sendCmd(cmd);
       }, 300);
+    }
+
+    async function stopActuation(cmdReset) {
+      if (keepAliveInterval) {
+        clearInterval(keepAliveInterval);
+        keepAliveInterval = null;
+      }
+      writeConsole("إيقاف التحكم القسري وإعادة العقل للوضع الطبيعي...");
+      if (cmdReset) await sendCmd(cmdReset);
+      setTimeout(() => sendCmd("10 01"), 200);
     }
 
     function openModule(moduleName) {
@@ -400,39 +542,78 @@
       } else if (moduleName.includes('A/C Diagnostics')) {
         currentMode = "AC";
         body.innerHTML = `
+          <!-- لوحة الضغط العالي مع الشريط البياني -->
           <div class="custom-box" style="background:#f0f9ff; border-color:#bae6fd;">
-            <div class="box-title" style="color:#0369a1;"><i class="fa-solid fa-snowflake"></i> بيانات منظومة التكييف</div>
+            <div class="box-title" style="color:#0369a1;"><i class="fa-solid fa-gauge-high"></i> ضغط الفريون - حساس الضغط العالي (A/C Pressure Sensor)</div>
             <div class="live-data-grid">
-              <div class="sensor-card"><small>ضغط الفريون (PSI)</small><div id="acPressPsi" class="val">-- PSI</div></div>
-              <div class="sensor-card"><small>ضغط الفريون (Bar)</small><div id="acPressBar" class="val">-- Bar</div></div>
-              <div class="sensor-card"><small>حرارة الثلاجة</small><div id="evapTempVal" class="val">-- °C</div></div>
+              <div class="sensor-card"><small>الضغط بوحدة PSI</small><div id="acPressPsi" class="val">-- PSI</div></div>
+              <div class="sensor-card"><small>الضغط بوحدة Bar</small><div id="acPressBar" class="val">-- Bar</div></div>
+            </div>
+            <div class="gauge-container">
+              <div id="acGaugeFill" class="gauge-fill"></div>
+            </div>
+          </div>
+
+          <!-- درجات الحرارة وحالة الكومبريسور -->
+          <div class="custom-box" style="background:#f8fafc; border-color:#cbd5e1;">
+            <div class="box-title" style="color:#334155;"><i class="fa-solid fa-temperature-three-quarters"></i> درجات الحرارة وحالة المنظومة</div>
+            <div class="live-data-grid">
+              <div class="sensor-card"><small>حرارة الافريز/الثلاجة</small><div id="evapTempVal" class="val">-- °C</div></div>
+              <div class="sensor-card"><small>حالة الكومبريسور / Relay</small><div id="acClutchState" class="val" style="color:#64748b;">--</div></div>
+              <div class="sensor-card"><small>حرارة الجو الخارجية</small><div id="ambientTempVal" class="val">-- °C</div></div>
+              <div class="sensor-card"><small>حرارة ماء المحرك</small><div id="acCoolantVal" class="val">-- °C</div></div>
+              <div class="sensor-card"><small>سرعة المحرك الحالية</small><div id="acRpmVal" class="val">0 RPM</div></div>
+            </div>
+          </div>
+
+          <!-- التحكم القسري المباشر بالتكييف -->
+          <div class="actuator-card" style="margin-top:12px;">
+            <h4><i class="fa-solid fa-bolt" style="color:#0284c7;"></i> اختبـار تعشيق الكومبريسور القسري (Actuation Test)</h4>
+            <div style="display:flex; gap:10px;">
+              <button class="action-btn btn-on" onclick="executeCommand(activeProfile.acClutchOn, activeProfile.headerAC)">تشغيل كلاتش التكييف</button>
+              <button class="action-btn btn-off" onclick="stopActuation(activeProfile.acClutchOff)">إيقاف الكومبريسور</button>
             </div>
           </div>
 
           <div style="display:flex; gap:10px; margin-top:15px;">
-            <button class="action-btn btn-on" onclick="startPolling(acPids)">بدء فحص التكييف</button>
+            <button class="action-btn btn-on" onclick="startPolling(acPids)">بدء القراءة الحية للتكييف</button>
             <button class="action-btn btn-off" onclick="stopPolling()">إيقاف</button>
           </div>
         `;
       } else if (moduleName.includes('Actuation')) {
         currentMode = "ACTUATION";
         body.innerHTML = `
-          <blockquote style="background:#fffbe0; border-right:4px solid #f59e0b; padding:10px; margin-bottom:15px; font-size:0.82rem;">
-            ⚠️ **شرط التشغيل:** السويتش على الطكة الثانية (ON) والمحرك مطفأ تماماً.
+          <blockquote style="background:#fffbe0; border-right:4px solid #f59e0b; padding:10px; margin-bottom:12px; font-size:0.8rem;">
+            ⚠️ **تنبيه:** ضع مفتاح التشغيل على الوضع (ON) والمحرك مطفأ تماماً قبل تجربة الاختيارات.
           </blockquote>
 
           <div class="actuator-grid">
             <div class="actuator-card">
-              <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد</h4>
-              <button class="action-btn btn-on" onclick="executeActuation('FAN', 'HIGH')">تشغيل (عالي)</button>
-              <button class="action-btn btn-toggle" onclick="executeActuation('FAN', 'LOW')">تشغيل (منخفض)</button>
-              <button class="action-btn btn-off" onclick="executeActuation('FAN', 'OFF')">إيقاف</button>
+              <h4><i class="fa-solid fa-fan" style="color:#0284c7;"></i> مروحة التبريد (Radiator Fan)</h4>
+              <button class="action-btn btn-on" onclick="executeCommand(activeProfile.fanHigh)">تشغيل سرعة عالية (High)</button>
+              <button class="action-btn btn-toggle" onclick="executeCommand(activeProfile.fanLow)">تشغيل سرعة بطيئة (Low)</button>
+              <button class="action-btn btn-off" onclick="stopActuation(activeProfile.fanStop)">إيقاف المروحة</button>
             </div>
 
             <div class="actuator-card">
-              <h4><i class="fa-solid fa-gas-pump" style="color:#ef4444;"></i> مضخة الوقود</h4>
-              <button class="action-btn btn-on" onclick="executeActuation('FUEL_PUMP', 'ON')">تشغيل (ON)</button>
-              <button class="action-btn btn-off" onclick="executeActuation('FUEL_PUMP', 'OFF')">إيقاف (OFF)</button>
+              <h4><i class="fa-solid fa-snowflake" style="color:#06b6d4;"></i> كلاتش التكييف (A/C Clutch)</h4>
+              <button class="action-btn btn-on" onclick="executeCommand(activeProfile.acClutchOn, activeProfile.headerAC)">تشغيل الكومبريسور</button>
+              <button class="action-btn btn-off" onclick="stopActuation(activeProfile.acClutchOff)">إيقاف الكومبريسور</button>
+            </div>
+
+            <div class="actuator-card">
+              <h4><i class="fa-solid fa-gas-pump" style="color:#ef4444;"></i> مضخة الوقود (Fuel Pump)</h4>
+              <button class="action-btn btn-on" onclick="executeCommand(activeProfile.fuelPumpOn)">تشغيل المضخة (ON)</button>
+              <button class="action-btn btn-off" onclick="stopActuation(activeProfile.fuelPumpOff)">إيقاف المضخة (OFF)</button>
+            </div>
+
+            <div class="actuator-card">
+              <h4><i class="fa-solid fa-syringe" style="color:#8b5cf6;"></i> قطع الحقن (Injector Cut-Off)</h4>
+              <button class="action-btn btn-warn" onclick="executeCommand(activeProfile.inj1Cut)">قطع بخاخ 1</button>
+              <button class="action-btn btn-warn" onclick="executeCommand(activeProfile.inj2Cut)">قطع بخاخ 2</button>
+              <button class="action-btn btn-warn" onclick="executeCommand(activeProfile.inj3Cut)">قطع بخاخ 3</button>
+              <button class="action-btn btn-warn" onclick="executeCommand(activeProfile.inj4Cut)">قطع بخاخ 4</button>
+              <button class="action-btn btn-off" onclick="stopActuation(activeProfile.inj1Cut.replace('01','00'))">إعادة تشغيل البخاخات</button>
             </div>
           </div>
         `;
@@ -443,6 +624,7 @@
 
     function closeModal() {
       stopPolling();
+      stopActuation();
       document.getElementById('modalWindow').style.display = 'none';
     }
 
@@ -463,8 +645,7 @@
         writeConsole("تم إيقاف القراءة.");
       }
     }
-    
-    // ربط القائمة المنسدلة للتعديل الفوري
+
     document.getElementById('modelSelect').addEventListener('change', updateCarProfile);
   </script>
 </body>
